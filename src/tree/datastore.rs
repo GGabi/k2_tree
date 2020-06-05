@@ -2,6 +2,7 @@ use {
   bitvec::{prelude::{bitvec, bitbox, BitVec}},
   crate::error::K2TreeError as Error,
   crate::tree::*,
+  crate::matrix::BitMatrix,
 };
 
 type Result<T> = std::result::Result<T, Error>;
@@ -592,19 +593,22 @@ impl K2Tree {
   ///   tree.set(5, 6, true)?;
   ///   tree.set(7, 7, true)?;
   ///   let matrix = tree.into_matrix()?;
-  ///   assert_eq!(true, matrix[0][0]);
-  ///   assert_eq!(true, matrix[5][6]);
-  ///   assert_eq!(true, matrix[7][7]);
-  ///   assert_eq!(false, matrix[4][3]);
+  ///   assert_eq!(true, matrix.get(0, 0).unwrap());
+  ///   assert_eq!(true, matrix.get(5, 6).unwrap());
+  ///   assert_eq!(true, matrix.get(7, 7).unwrap());
+  ///   assert_eq!(false, matrix.get(4, 3).unwrap());
   ///   Ok(())
   /// }
   /// ```
-  pub fn into_matrix(self) -> Result<Vec<Vec<bool>>> {
-    let mut m: Vec<Vec<bool>> = Vec::new();
-    for x in 0..self.matrix_width {
-      m.push(Vec::new());
-      for y in 0..self.matrix_width {
-        m[x].push(self.get(x, y)?);
+  pub fn into_matrix(self) -> Result<BitMatrix> {
+    let mut m = BitMatrix::with_dimensions(self.matrix_width, self.matrix_width);
+    for y in 0..self.matrix_width {
+      for x in 0..self.matrix_width {
+        if let Err(e) = m.set(x, y, self.get(x, y)?) {
+          return Err(Error::BitMatrixError {
+            source: Box::new(e),
+          })
+        }
       }
     }
     Ok(m)
@@ -612,7 +616,7 @@ impl K2Tree {
   /// Produces the bit-matrix a K2Tree represents.
   /// 
   /// The matrix is presented as a list of columns of bits, Vec<Vec<bool>>.
-  /// /// ```
+  /// ```
   /// fn main() -> Result<(), k2_tree::error::K2TreeError> {
   ///   use k2_tree::K2Tree;
   ///   let mut tree = K2Tree::new();
@@ -620,19 +624,22 @@ impl K2Tree {
   ///   tree.set(5, 6, true)?;
   ///   tree.set(7, 7, true)?;
   ///   let matrix = tree.to_matrix()?;
-  ///   assert_eq!(true, matrix[0][0]);
-  ///   assert_eq!(true, matrix[5][6]);
-  ///   assert_eq!(true, matrix[7][7]);
-  ///   assert_eq!(false, matrix[4][3]);
+  ///   assert_eq!(true, matrix.get(0, 0).unwrap());
+  ///   assert_eq!(true, matrix.get(5, 6).unwrap());
+  ///   assert_eq!(true, matrix.get(7, 7).unwrap());
+  ///   assert_eq!(false, matrix.get(4, 3).unwrap());
   ///   Ok(())
   /// }
   /// ```
-  pub fn to_matrix(&self) -> Result<Vec<Vec<bool>>> {
-    let mut m: Vec<Vec<bool>> = Vec::new();
-    for x in 0..self.matrix_width {
-      m.push(Vec::new());
-      for y in 0..self.matrix_width {
-        m[x].push(self.get(x, y)?);
+  pub fn to_matrix(&self) -> Result<BitMatrix> {
+    let mut m = BitMatrix::with_dimensions(self.matrix_width, self.matrix_width);
+    for y in 0..self.matrix_width {
+      for x in 0..self.matrix_width {
+        if let Err(e) = m.set(x, y, self.get(x, y)?) {
+          return Err(Error::BitMatrixError {
+            source: Box::new(e),
+          })
+        }
       }
     }
     Ok(m)
@@ -641,21 +648,22 @@ impl K2Tree {
   /// 
   /// All types that can produce rows of bits are valid inputs.
   /// ```
-  /// use k2_tree::K2Tree;
+  /// use k2_tree::{K2Tree, matrix::BitMatrix};
   /// let t = K2Tree::new();
-  /// let mut m: Vec<Vec<bool>> = vec![vec![false; 8]; 8];
-  /// m[0][5] = true;
+  /// let mut m = BitMatrix::with_dimensions(8, 8);
+  /// m.set(0, 5, true);
   /// assert!(K2Tree::from_matrix(m).is_ok());
   /// ```
-  pub fn from_matrix<M>(matrix: M) -> Result<Self>
-  where
-    M: IntoIterator<Item=Vec<bool>>,
-  {
+  pub fn from_matrix(matrix: BitMatrix) -> Result<Self> {
     let mut tree = K2Tree::new();
-    for (x, column) in matrix.into_iter().enumerate() {
-      for y in one_positions_vec(&column).into_iter() {
-        while x >= tree.matrix_width || y >= tree.matrix_width { tree.grow(); }
-        tree.set(x, y, true)?;
+    while matrix.width > tree.matrix_width
+    || matrix.height > tree.matrix_width {
+      tree.grow();
+    }
+    let rows = matrix.into_rows();
+    for (y, row) in rows.into_iter().enumerate() {
+      for (x, state) in row.into_iter().enumerate() {
+        tree.set(x, y, state)?;
       }
     }
     Ok(tree)
@@ -718,9 +726,9 @@ impl std::hash::Hash for K2Tree {
     self.leaves.hash(state);
   }
 }
-impl std::convert::TryFrom<Vec<Vec<bool>>> for K2Tree {
+impl std::convert::TryFrom<BitMatrix> for K2Tree {
   type Error = Error;
-  fn try_from(matrix: Vec<Vec<bool>>) -> Result<Self> {
+  fn try_from(matrix: BitMatrix) -> Result<Self> {
     //error checking needed
     Self::from_matrix(matrix)
   }
@@ -1075,16 +1083,18 @@ mod api {
   }
   #[test]
   fn from_matrix() -> Result<()> {
-    let m = vec![
-      vec![false,false,false,false,true,false,false,false],
-      vec![false; 8],
-      vec![false; 8],
-      vec![false; 8],
-      vec![false,true,false,false,false,true,false,false],
-      vec![true,false,false,false,true,false,false,false],
-      vec![false,false,true,false,false,false,false,false],
-      vec![true,true,true,false,false,false,false,false],
+    let bits = bitvec![
+      0,0,0,0, 0,1,0,1,
+      0,0,0,0, 1,0,0,1,
+      0,0,0,0, 0,0,1,1,
+      0,0,0,0, 0,0,0,0,
+
+      1,0,0,0, 0,1,0,0,
+      0,0,0,0, 1,0,0,0,
+      0,0,0,0, 0,0,0,0,
+      0,0,0,0, 0,0,0,0,
     ];
+    let m = BitMatrix::from_bits(8, 8, bits);
     let tree = K2Tree {
       matrix_width: 8,
       k: 2,
@@ -1099,32 +1109,36 @@ mod api {
   }
   #[test]
   fn to_matrix() -> Result<()> {
-    let m = vec![
-      vec![false,false,false,false,true,false,false,false],
-      vec![false; 8],
-      vec![false; 8],
-      vec![false; 8],
-      vec![false,true,false,false,false,true,false,false],
-      vec![true,false,false,false,true,false,false,false],
-      vec![false,false,true,false,false,false,false,false],
-      vec![true,true,true,false,false,false,false,false],
+    let bits = bitvec![
+      0,0,0,0, 0,1,0,1,
+      0,0,0,0, 1,0,0,1,
+      0,0,0,0, 0,0,1,1,
+      0,0,0,0, 0,0,0,0,
+
+      1,0,0,0, 0,1,0,0,
+      0,0,0,0, 1,0,0,0,
+      0,0,0,0, 0,0,0,0,
+      0,0,0,0, 0,0,0,0,
     ];
+    let m = BitMatrix::from_bits(8, 8, bits);
     let new_m = K2Tree::from_matrix(m.clone())?.to_matrix()?;
     assert_eq!(m, new_m);
     Ok(())
   }
   #[test]
   fn into_matrix() -> Result<()> {
-    let m = vec![
-      vec![false,false,false,false,true,false,false,false],
-      vec![false; 8],
-      vec![false; 8],
-      vec![false; 8],
-      vec![false,true,false,false,false,true,false,false],
-      vec![true,false,false,false,true,false,false,false],
-      vec![false,false,true,false,false,false,false,false],
-      vec![true,true,true,false,false,false,false,false],
+    let bits = bitvec![
+      0,0,0,0, 0,1,0,1,
+      0,0,0,0, 1,0,0,1,
+      0,0,0,0, 0,0,1,1,
+      0,0,0,0, 0,0,0,0,
+
+      1,0,0,0, 0,1,0,0,
+      0,0,0,0, 1,0,0,0,
+      0,0,0,0, 0,0,0,0,
+      0,0,0,0, 0,0,0,0,
     ];
+    let m = BitMatrix::from_bits(8, 8, bits);
     let new_m = K2Tree::from_matrix(m.clone())?.into_matrix()?;
     assert_eq!(m, new_m);
     Ok(())

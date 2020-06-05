@@ -72,6 +72,11 @@ pub enum K2TreeError {
     ///
     source: Box<K2TreeError>
   },
+  /// Propogation of a BitMatrixError.
+  BitMatrixError {
+    ///
+    source: Box<BitMatrixError>,
+  }
 }
 impl std::error::Error for K2TreeError {
   fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -80,6 +85,7 @@ impl std::error::Error for K2TreeError {
       CorruptedK2Tree{source} => Some(source),
       Read{source} => Some(source),
       Write{source} => Some(source),
+      BitMatrixError{source} => Some(source),
       _ => None,
     }
   }
@@ -89,7 +95,7 @@ impl std::fmt::Display for K2TreeError {
     use K2TreeError::*;
     match self {
       TraverseError{x, y} => write!(f, "Error encountered while traversing K2Tree for value at coordinates ({}, {})", x, y),
-      OutOfBounds{
+      OutOfBounds {
         x_y: [x, y],
         min_x_y: [min_x, min_y],
         max_x_y: [max_x, max_y]
@@ -102,6 +108,36 @@ impl std::fmt::Display for K2TreeError {
       CorruptedK2Tree{source} => write!(f, "The K2Tree's contents are corrupted as a result of the following error: {}", source),
       Read{source} => write!(f, "Error during read: {}", source),
       Write{source} => write!(f, "Error during write: {}", source),
+      BitMatrixError{source} => write!(f, "{}", source),
+    }
+  }
+}
+
+/// Errors produced as a result of interactions with the BitMatrix object.
+#[derive(Clone, Debug)]
+pub enum BitMatrixError {
+  /// Produced when a user attempts to read or write to a bit outside of the
+  /// valid range.
+  OutOfBounds {
+    ///
+    x_y: [usize; 2],
+    ///
+    max_x_y: [usize; 2],
+  }
+}
+impl std::error::Error for BitMatrixError {
+  fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    None
+  }
+}
+impl std::fmt::Display for BitMatrixError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    use BitMatrixError::*;
+    match self {
+      OutOfBounds {
+        x_y: [x, y],
+        max_x_y: [max_x, max_y],
+      } => write!(f, "Attempts to access a bit at coordinates({}, {}) which are not in the range of the matrix: (0, 0) -> ({}, {})", x, y, max_x, max_y),
     }
   }
 }

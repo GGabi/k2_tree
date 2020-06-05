@@ -3,6 +3,7 @@ mod datastore;
 mod iterators;
 
 pub use datastore::*;
+pub use datastore::K2Tree;
 pub use iterators::{
   StemBit,
   LeafBit,
@@ -146,14 +147,4 @@ fn one_positions_range(bits: &BitVec, begin: usize, end: usize) -> Vec<usize> {
   bits[begin..end].into_iter().enumerate().filter_map(|(pos, bit)|
     if *bit { Some(pos) } else { None }
   ).collect()
-}
-fn one_positions_vec(bits: &[bool]) -> Vec<usize> {
-  bits
-  .iter()
-  .enumerate()
-  .filter_map(
-    |(pos, bit)|
-    if *bit { Some(pos) }
-    else   { None })
-  .collect()
 }
