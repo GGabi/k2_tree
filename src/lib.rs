@@ -1,15 +1,33 @@
 #![allow(non_snake_case)]
 #![warn(missing_debug_implementations, rust_2018_idioms, missing_docs)]
 
-/*! A collection designed to efficiently compress sparsely-populated bit-matrices.
+/*!
+A collection designed to efficiently compress sparsely-populated bit-matrices.
 
 See the original proposal [here](https://users.dcc.uchile.cl/~gnavarro/ps/spire09.1.pdf).
 
-**Note:** This library heavily relies upon [bit_vec](https://docs.rs/bitvec/0.17.4/bitvec/) to optimally store its data.
+**Note:** This library heavily relies upon [bitvec](https://docs.rs/bitvec/0.17.4/bitvec/) to optimally store its data.
 If you have `k2_tree` as a dependancy, always try to compile with optimisations!
 `bit_vec` is
 very slow without them!
+*/
 
+/*!
+# When `K2Tree`s are Useful:
+
+`K2Tree`s are useful when you need to store two-dimensional data efficiently, especially when 
+the data is sparsely populated.
+
+A real world example would be representing Web-Graphs. In this scenario, each column and row 
+of a bit-matrix would represent a specific webpage, and all bits represent the whether two
+pages are joined by a hyperlink; 1 if yes and 0 if no. As it turns out, these types of Web-Graphs 
+tend to produce sparsely populated bit-matrices.
+
+Another example would be representing Triple-Stores, which [this repo](https://github.com/GGabi/RippleDB) 
+demonstrates is effective.
+*/
+
+/*!
 # How it Works:
 
 ## Original Bit-Matrix:
@@ -98,3 +116,6 @@ pub mod tree;
 
 /// Library error types.
 pub mod error;
+
+/// `BitMatrix` struct.
+pub mod matrix;
