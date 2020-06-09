@@ -7,7 +7,7 @@ edition = "2018"
 description = "A space-efficient representation of sparsely populated bit-matrices."
 license = "MIT"
 repository = "https://github.com/GGabi/k2_tree"
-keywords = ["collection", "tree", "data-structure", "compression", "matrix", "bit", "bitvec"]
+keywords = ["collection", "tree", "matrix", "bit", "bit-matrix"]
 categories = ["compression", "data-structures"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
