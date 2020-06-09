@@ -7,6 +7,7 @@ edition = "2018"
 description = "A space-efficient representation of sparsely populated bit-matrices."
 license = "MIT"
 repository = "https://github.com/GGabi/k2_tree"
+documentation = "https://docs.rs/k2_tree/"
 keywords = ["collection", "tree", "matrix", "bit", "bit-matrix"]
 categories = ["compression", "data-structures"]
 
