@@ -57,6 +57,38 @@ impl BitMatrix {
     let index: usize = y*self.width + x;
     Ok(*self.bits.get(index).unwrap())
   }
+  /// Returns the state of all the bits at a specific x-coordinate.
+  /// 
+  /// Bits are ordered by row, starting at y-coordinate 0.
+  pub fn get_column(&self, x: usize) -> Result<Vec<bool>> {
+    if x >= self.width {
+      return Err(BitMatrixError::OutOfBounds {
+        x_y: [x, 0],
+        max_x_y: [self.width-1, self.height-1],
+      })
+    }
+    let mut column = Vec::new();
+    for row in 0..self.height {
+      column.push(self.bits[x + (row * self.width)]);
+    }
+    Ok(column)
+  }
+  /// Returns the state of all the bits at a specific y-coordinate.
+  /// 
+  /// Bits are ordered by column, starting at x-coordinate 0.
+  pub fn get_row(&self, y: usize) -> Result<Vec<bool>> {
+    if y >= self.height {
+      return Err(BitMatrixError::OutOfBounds {
+        x_y: [0, y],
+        max_x_y: [self.width-1, self.height-1],
+      })
+    }
+    let mut row = Vec::new();
+    for column in 0..self.width {
+      row.push(self.bits[(y * self.width) + column]);
+    }
+    Ok(row)
+  }
   /// Changes the state of a bit at a specififc coordinate.
   pub fn set(&mut self, x: usize, y: usize, state: bool) -> Result<()> {
     if x >= self.width || y >= self.height {
@@ -168,11 +200,44 @@ impl BitMatrix {
     }
     vecs
   }
+  /// Reduces the width and height such that there are no empty columns or rows
+  /// on the edges.
+  pub fn shrink_to_fit(&mut self) {
+    //Find the rightmost column containing a 1
+    //Find the lowest row containing a 1
+    //Set width and height to those positions
+    for col in (0..self.width).rev() {
+      let col_bits = {
+        let mut bv = BitVec::new();
+        bv.extend(self.get_column(col).unwrap());
+        bv
+      };
+      if !all_zeroes(&col_bits, 0, col_bits.len()) {
+        self.resize_width(col+1);
+        break
+      }
+    }
+    for row in (0..self.height).rev() {
+      let row_bits = {
+        let mut bv = BitVec::new();
+        bv.extend(self.get_row(row).unwrap());
+        bv
+      };
+      if !all_zeroes(&row_bits, 0, row_bits.len()) {
+        self.resize_height(row+1);
+        break
+      }
+    }
+  }
 }
 impl Default for BitMatrix {
   fn default() -> Self {
     BitMatrix::new()
   }
+}
+
+fn all_zeroes(bits: &BitVec, begin: usize, end: usize) -> bool {
+  bits[begin..end].into_iter().fold(true, |total, bit| total & !bit)
 }
 
 #[cfg(test)]
@@ -394,5 +459,74 @@ mod api {
     assert_eq!(bits[4..8].to_vec(), rows[1]);
     assert_eq!(bits[8..12].to_vec(), rows[2]);
     assert_eq!(bits[12..16].to_vec(), rows[3]);
+  }
+  #[test]
+  fn get_column() -> Result<()> {
+    let bits = vec![
+      false,false,false,true,
+      false,false,true,false,
+      false,true,false,false,
+      true,false,false,false,
+    ];
+    let m = BitMatrix::from_bits(4, 4, bits.clone());
+    assert_eq!(
+      vec![false,false,false,true],
+      m.get_column(0)?
+    );
+    assert_eq!(
+      vec![false,false,true,false],
+      m.get_column(1)?
+    );
+    assert_eq!(
+      vec![false,true,false,false],
+      m.get_column(2)?
+    );
+    assert_eq!(
+      vec![true,false,false,false],
+      m.get_column(3)?
+    );
+    Ok(())
+  }
+  #[test]
+  fn get_row() -> Result<()> {
+    let bits = vec![
+      false,false,false,true,
+      false,false,true,false,
+      false,true,false,false,
+      true,false,false,false,
+    ];
+    let m = BitMatrix::from_bits(4, 4, bits.clone());
+    assert_eq!(
+      vec![false,false,false,true],
+      m.get_row(0)?
+    );
+    assert_eq!(
+      vec![false,false,true,false],
+      m.get_row(1)?
+    );
+    assert_eq!(
+      vec![false,true,false,false],
+      m.get_row(2)?
+    );
+    assert_eq!(
+      vec![true,false,false,false],
+      m.get_row(3)?
+    );
+    Ok(())
+  }
+  #[test]
+  fn shrink_to_fit() {
+    let bits = vec![
+      true,true,false,false,
+      true,false,true,false,
+      false,false,false,false,
+      false,false,false,false,
+    ];
+    let mut m = BitMatrix::from_bits(4, 4, bits.clone());
+    assert_eq!(4, m.width);
+    assert_eq!(4, m.height);
+    m.shrink_to_fit();
+    assert_eq!(3, m.width);
+    assert_eq!(2, m.height);
   }
 }
