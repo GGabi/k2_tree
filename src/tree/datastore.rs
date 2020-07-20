@@ -760,9 +760,13 @@ impl K2Tree {
     self.descend(&env, 0, 0, [[0, m_width-1], [0, m_width-1]])
   }
   fn descend(&self, env: &DescendEnv, layer: usize, stem_pos: usize, range: Range) -> Result<DescendResult> {
-    let subranges = to_4_subranges(range);
-    for (child_pos, child) in self.stems[stem_pos..stem_pos+4].iter().enumerate() {
-      if within_range(&subranges[child_pos], env.x, env.y) {
+    // TODO: Completely remove all uses of old Range type, convert to Range2D
+    //       Make generic over any K value, not just 2
+    let range2d = Range2D::from_range(range);
+    let subranges2d = self.to_subranges(range2d).unwrap();
+    for (child_pos, child) in self.stems[stem_pos..stem_pos+self.block_len()].iter().enumerate() {
+      if subranges2d.subranges[child_pos].contains(env.x, env.y) {
+      // if within_range(&subranges[child_pos], env.x, env.y) {
         if !child { return Ok(DescendResult::Stem(stem_pos, range)) } //The bit exists within a range that has all zeros
         else if layer == env.slayer_max {
           let leaf_start = match self.leaf_start(stem_pos + child_pos) {
@@ -772,7 +776,7 @@ impl K2Tree {
               y: env.y
             }),
           };
-          return Ok(DescendResult::Leaf(leaf_start, subranges[child_pos]))
+          return Ok(DescendResult::Leaf(leaf_start, subranges2d.subranges[child_pos].to_range()))
         }
         else {
           let child_stem = match self.child_stem(layer, stem_pos, child_pos) {
@@ -785,7 +789,7 @@ impl K2Tree {
           return self.descend(env,
                               layer+1,
                               child_stem,
-                              subranges[child_pos])
+                              subranges2d.subranges[child_pos].to_range())
         }
       }
     }
