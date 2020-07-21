@@ -18,7 +18,7 @@ type Result<T> = std::result::Result<T, Error>;
 /// fn main() -> Result<(), k2_tree::error::K2TreeError> {
 ///   use k2_tree::K2Tree;
 ///   //matrix_width = 8, k = 2
-///   let mut tree = K2Tree::new();
+///   let mut tree = K2Tree::new(2);
 ///   tree.set(0, 4, true);
 ///   tree.set(6, 5, true);
 ///   tree.set(0, 4, false);
@@ -57,14 +57,13 @@ impl K2Tree {
   /// Returns a `K2Tree` representing an 8x8 bit-matrix of all 0s. K = 2.
   /// ```
   /// use k2_tree::K2Tree;
-  /// let tree = K2Tree::new();
+  /// let tree = K2Tree::new(2);
   /// assert!(tree.is_empty());
   /// assert_eq!(8, tree.matrix_width);
   /// assert_eq!(2, tree.k);
   /// ```
-  pub fn new() -> Self {
+  pub fn new(k: usize) -> Self {
     /* For now fix k as 2, further work to make it user-defined */
-    let k: usize = 2;
     let mw = k.pow(3);
     K2Tree {
       matrix_width: mw,
@@ -85,7 +84,7 @@ impl K2Tree {
   /// ```
   /// fn main() -> Result<(), k2_tree::error::K2TreeError> {
   ///   use k2_tree::K2Tree;
-  ///   let mut tree = K2Tree::new();
+  ///   let mut tree = K2Tree::new(2);
   ///   tree.set(0, 1, true)?;
   ///   assert_eq!(true, tree.get(0, 1)?);
   ///   assert_eq!(false, tree.get(0, 0)?);
@@ -111,8 +110,8 @@ impl K2Tree {
     };
     match descend_result {
       DescendResult::Leaf(leaf_start, leaf_range) => {
-        if leaf_range[0][1] - leaf_range[0][0] != 1
-        || leaf_range[1][1] - leaf_range[1][0] != 1 {
+        if leaf_range.width() != 2
+        || leaf_range.height() != 2 {
           return Err(Error::Read {
             source: Box::new(Error::TraverseError{x, y})
           })
@@ -120,7 +119,7 @@ impl K2Tree {
         //Calculation removes extra branches, makes it faster
         // range = [[5, 6], [7, 8]]
         // (5, 7) = 0; (6, 7) = 1; (5, 8) = 2; (6, 8) = 3
-        let offset = (2 * (y - leaf_range[1][0])) + (x - leaf_range[0][0]);
+        let offset = (2 * (y - leaf_range.min_y)) + (x - leaf_range.min_x);
         Ok(self.leaves[leaf_start+offset])
       },
       DescendResult::Stem(_, _) => Ok(false),
@@ -131,7 +130,7 @@ impl K2Tree {
   /// fn main() -> Result<(), k2_tree::error::K2TreeError> {
   ///   use bitvec::prelude::bitvec;
   ///   use k2_tree::K2Tree;
-  ///   let mut tree = K2Tree::new();
+  ///   let mut tree = K2Tree::new(2);
   ///   tree.set(1, 0, true)?;
   ///   tree.set(3, 0, true)?;
   ///   tree.set(6, 0, true)?;
@@ -156,14 +155,14 @@ impl K2Tree {
     for x in (0..self.matrix_width).step_by(self.k) {
       match self.matrix_bit(x, y, self.matrix_width)? {
         DescendResult::Leaf(leaf_start, leaf_range) => {
-          if leaf_range[0][1] - leaf_range[0][0] != 1
-          || leaf_range[1][1] - leaf_range[1][0] != 1 {
+          if leaf_range.width() != 2
+          || leaf_range.height() != 2 {
             return Err(Error::Read {
               source: Box::new(Error::TraverseError{x, y})
             })
           }
           //Calculation instead of if-else block makes hot-code much faster
-          let offset = (2 * (y - leaf_range[1][0])) + (x - leaf_range[0][0]);
+          let offset = (2 * (y - leaf_range.min_y)) + (x - leaf_range.min_x);
           for i in 0..self.k { ret_v.push(self.leaves[leaf_start+offset+i]); }
         },
         DescendResult::Stem(_, _) => {
@@ -178,7 +177,7 @@ impl K2Tree {
   /// fn main() -> Result<(), k2_tree::error::K2TreeError> {
   ///   use bitvec::prelude::bitvec;
   ///   use k2_tree::K2Tree;
-  ///   let mut tree = K2Tree::new();
+  ///   let mut tree = K2Tree::new(2);
   ///   tree.set(1, 1, true)?;
   ///   tree.set(1, 3, true)?;
   ///   tree.set(1, 6, true)?;
@@ -203,13 +202,13 @@ impl K2Tree {
     for y in (0..self.matrix_width).step_by(self.k) {
       match self.matrix_bit(x, y, self.matrix_width)? {
         DescendResult::Leaf(leaf_start, leaf_range) => {
-          if leaf_range[0][1] - leaf_range[0][0] != 1
-          || leaf_range[1][1] - leaf_range[1][0] != 1 {
+          if leaf_range.width() != 2
+          || leaf_range.height() != 2 {
             return Err(Error::Read {
               source: Box::new(Error::TraverseError{x, y})
             })
           }
-          let offset = (2 * (y - leaf_range[1][0])) + (x - leaf_range[0][0]);
+          let offset = (2 * (y - leaf_range.min_y)) + (x - leaf_range.min_x);
           for i in 0..self.k { ret_v.push(self.leaves[leaf_start+offset+(i*self.k)]); }
         },
         DescendResult::Stem(_, _) => {
@@ -224,7 +223,7 @@ impl K2Tree {
   /// ```
   /// fn main() -> Result<(), k2_tree::error::K2TreeError> {
   ///   use k2_tree::K2Tree;
-  ///   let mut tree = K2Tree::new();
+  ///   let mut tree = K2Tree::new(2);
   ///   assert_eq!(false, tree.get(0, 0)?);
   ///   tree.set(0, 0, true)?;
   ///   assert_eq!(true, tree.get(0, 0)?);
@@ -232,6 +231,7 @@ impl K2Tree {
   /// }
   /// ```
   pub fn set(&mut self, x: usize, y: usize, state: bool) -> Result<()> {
+    let block_len = self.block_len();
     /* Assuming k=2 */
     let descend_result = match self.matrix_bit(x, y, self.matrix_width) {
       Ok(dr) => dr,
@@ -241,19 +241,19 @@ impl K2Tree {
     };
     match descend_result {
       DescendResult::Leaf(leaf_start, leaf_range) => {
-        if leaf_range[0][1] - leaf_range[0][0] != 1
-        || leaf_range[1][1] - leaf_range[1][0] != 1 {
-          /* Final submatrix isn't a 2 by 2 so can't be a leaf */
+        if leaf_range.width() != self.k
+        || leaf_range.height() != self.k {
+          /* Final submatrix isn't a k by k so can't be a leaf */
           return Err(Error::Write {
             source: Box::new(Error::TraverseError{x, y})
           })
         }
         /* Set the bit in the leaf to the new state */
-        let offset = (2 * (y - leaf_range[1][0])) + (x - leaf_range[0][0]);
+        let offset = (self.k * (y - leaf_range.min_y)) + (x - leaf_range.min_x); //TODO: Check
         self.leaves.set(leaf_start+offset, state);
         /* If leaf is now all 0's, remove leaf and alter rest of struct to reflect changes.
         Loop up the stems changing the parent bits to 0's and removing stems that become all 0's */
-        if !state && all_zeroes(&self.leaves, leaf_start, leaf_start+4) {
+        if !state && all_zeroes(&self.leaves, leaf_start, leaf_start+block_len) {
           /* - Remove the leaf
               - Use stem_to_leaf to find the dead leaf's parent bit
               - Remove the elem from stem_to_leaf that mapped to dead leaf
@@ -263,43 +263,46 @@ impl K2Tree {
               - - Alter layer_starts if needed
               - - Find parent bit and set to 0
               - - Repeat until reach stem that isn't all 0's or reach stem layer 0 */
-          if let Err(()) = remove_block(&mut self.leaves, leaf_start) {
+          if let Err(()) = remove_block(&mut self.leaves, leaf_start, block_len) {
+            dbg!(&self.leaves);
             return Err(Error::CorruptedK2Tree {
               source: Box::new(Error::Write {
                 source: Box::new(Error::LeafRemovalError {
                   pos: leaf_start,
-                  len: 4
+                  len: block_len
                 })
               })
             })
           }
-          let stem_bit_pos = self.stem_to_leaf[leaf_start/4];
-          self.stem_to_leaf.remove(leaf_start/4);
+          let stem_bit_pos = self.stem_to_leaf[leaf_start/block_len]; //TODO
+          self.stem_to_leaf.remove(leaf_start/block_len); //TODO
           if self.stem_to_leaf.is_empty() {
             /* If no more leaves, then remove all stems immediately
             and don't bother with complex stuff below */
-            self.stems = bitvec![0,0,0,0];
+            self.stems = bitvec![0; block_len];
             self.slayer_starts = vec![0];
             return Ok(())
           }
           let layer_start = self.slayer_starts[self.max_slayers-1];
           self.stems.set(layer_start + stem_bit_pos, false); //Dead leaf parent bit = 0
           let mut curr_layer = self.max_slayers-1;
-          let mut stem_start = layer_start + block_start(stem_bit_pos);
+          let mut stem_start = layer_start + self.block_start(stem_bit_pos);
+          dbg!(stem_start, layer_start, &self.stems);
           while curr_layer > 0
-          && all_zeroes(&self.stems, stem_start, stem_start+4) {
+          && all_zeroes(&self.stems, stem_start, stem_start+block_len) {
             if curr_layer == self.max_slayers-1 {
-              for stem_to_leaf_bit in &mut self.stem_to_leaf[leaf_start/4..] {
-                *stem_to_leaf_bit -= 4;
+              for stem_to_leaf_bit in &mut self.stem_to_leaf[leaf_start/block_len..] {
+                *stem_to_leaf_bit -= block_len;
               }
             }
             for layer_start in &mut self.slayer_starts[curr_layer+1..] {
-              // NOTE: this was 1 but it looks like that was an uncaught error, changed to 4
+              // NOTE: this was 1 but it looks like that was an uncaught error, changed to block_len
               //       which is stem-length but if any errors, look here.
-              *layer_start -= 4; //Adjust lower layer start positions to reflect removal of stem
+              *layer_start -= block_len; //Adjust lower layer start positions to reflect removal of stem
             }
             let (parent_stem_start, bit_offset) = self.parent(stem_start);
-            if let Err(()) = remove_block(&mut self.stems, stem_start) {
+            if let Err(()) = remove_block(&mut self.stems, stem_start, block_len) {
+              dbg!(3);
               return  Err(Error::CorruptedK2Tree {
                 source: Box::new(Error::Write {
                   source: Box::new(Error::StemRemovalError {
@@ -325,17 +328,17 @@ impl K2Tree {
           - Set bit at (x, y) to 1 */
         let mut layer_starts_len = self.slayer_starts.len();
         let mut layer = self.layer_from_range(stem_range);
-        let mut subranges: [Range; 4];
+        let mut subranges: SubRanges;
         /* Keep track of whether lowest stem is freshly created (all 0000s) */
         let mut fresh_stem = false;
         /* Create correct stems in layers on the way down to the final layer,
         which points to the leaves */
         while layer < self.max_slayers-1 {
           fresh_stem = true;
-          subranges = to_4_subranges(stem_range);
+          subranges = self.to_subranges(stem_range).unwrap(); // TODO: Add a new error
           let (child_pos, &subrange) =
             match subranges.iter().enumerate().find(
-              |(_, subrange)| within_range(subrange, x, y)
+              |(_, subrange)| subrange.contains(x, y)
             ) {
               Some(val) => val,
               None => return Err(Error::CorruptedK2Tree {
@@ -369,12 +372,13 @@ impl K2Tree {
           /* We're now working on the child layer */
           layer += 1;
           stem_range = subrange;
-          if let Err(()) = insert_block(&mut self.stems, stem_start) {
+          if let Err(()) = insert_block(&mut self.stems, stem_start, block_len) {
+            dbg!(&self, self.stems.len());
             return Err(Error::CorruptedK2Tree {
               source: Box::new(Error::Write {
                 source: Box::new(Error::StemInsertionError {
                   pos: stem_start,
-                  len: 4
+                  len: self.block_len()
                 })
               })
             })
@@ -387,10 +391,10 @@ impl K2Tree {
           }
         }
         /* We're at the final stem layer */
-        subranges = to_4_subranges(stem_range);
+        subranges = self.to_subranges(stem_range).unwrap(); //TODO: add new error
         let (child_pos, &subrange) =
           match subranges.iter().enumerate().find(
-            |(_, subrange)| within_range(subrange, x, y)
+            |(_, subrange)| subrange.contains(x, y)
           ) {
             Some(val) => val,
             None => return Err(Error::CorruptedK2Tree {
@@ -432,8 +436,8 @@ impl K2Tree {
         }
         self.stem_to_leaf.insert(stem_to_leaf_pos, layer_bit_pos);
         /* Create new leaf of all 0's */
-        let leaf_start = stem_to_leaf_pos * 4;
-        if let Err(()) = insert_block(&mut self.leaves, leaf_start) {
+        let leaf_start = stem_to_leaf_pos * block_len;
+        if let Err(()) = insert_block(&mut self.leaves, leaf_start, block_len) {
           return Err(Error::CorruptedK2Tree {
             source: Box::new(Error::Write {
               source: Box::new(Error::LeafInsertionError {
@@ -445,7 +449,7 @@ impl K2Tree {
         }
         /* Change bit at (x, y) to 1 */
         let leaf_range = subrange;
-        let offset = (2 * (y - leaf_range[1][0])) + (x - leaf_range[0][0]);
+        let offset = (self.k * (y - leaf_range.min_y)) + (x - leaf_range.min_x);
         self.leaves.set(leaf_start+offset, true);
         return Ok(())
       }
@@ -483,7 +487,7 @@ impl K2Tree {
   /// Increases the height and width of the matrix the K2Tree represents by a factor of k.
   /// ```
   /// use k2_tree::K2Tree;
-  /// let mut tree = K2Tree::new();
+  /// let mut tree = K2Tree::new(2);
   /// assert_eq!(2, tree.k);
   /// assert_eq!(8, tree.matrix_width);
   /// tree.grow();
@@ -492,17 +496,18 @@ impl K2Tree {
   /// assert_eq!(32, tree.matrix_width);
   /// ```
   pub fn grow(&mut self) {
+    let block_len = self.block_len();
     self.matrix_width *= self.k;
     self.max_slayers += 1;
     if self.leaves.len() > 0  {
       /* Only insert the extra layers etc. if the
       tree isn't all 0s */
       for slayer_start in &mut self.slayer_starts {
-        *slayer_start += 4;
+        *slayer_start += block_len;
       }
       self.slayer_starts.insert(0, 0);
-      /* Insert 1000 to beginning of stems */
-      for _ in 0..3 { self.stems.insert(0, false); }
+      /* Insert 10...00 to beginning of stems */
+      for _ in 0..block_len-1 { self.stems.insert(0, false); }
       self.stems.insert(0, true);
     }
   }
@@ -512,7 +517,7 @@ impl K2Tree {
   /// Does not Err if the matrix cannot be shrunk i.e. it is already at the minimum size.
   /// ```
   /// use k2_tree::K2Tree;
-  /// let mut tree = K2Tree::new();
+  /// let mut tree = K2Tree::new(2);
   /// tree.grow();
   /// assert_eq!(16, tree.matrix_width);
   /// tree.shrink_if_possible();
@@ -530,7 +535,7 @@ impl K2Tree {
   /// Returns an Err if the matrix cannot be shrunk i.e. it is already at the minimum size.
   /// ```
   /// use k2_tree::K2Tree;
-  /// let mut tree = K2Tree::new();
+  /// let mut tree = K2Tree::new(2);
   /// tree.grow();
   /// assert_eq!(16, tree.matrix_width);
   /// assert!(tree.shrink().is_ok());
@@ -538,12 +543,13 @@ impl K2Tree {
   /// assert!(tree.shrink().is_err());
   /// ```
   pub fn shrink(&mut self) -> Result<()> {
+    let block_len = self.block_len();
     if self.matrix_width <= self.k.pow(3) {
       return Err(Error::CouldNotShrink {
         reason: format!("Already at minimum size: {}", self.matrix_width)
       })
     }
-    else if self.stems[1..4] != bitbox![0,0,0] {
+    else if self.stems[1..block_len] != bitbox![0; block_len-1] {
       return Err(Error::CouldNotShrink {
         reason: "Shrinking would lose information about the matrix".into()
       })
@@ -552,10 +558,10 @@ impl K2Tree {
     self.max_slayers -= 1;
     self.slayer_starts.remove(0);
     for slayer_start in &mut self.slayer_starts {
-      *slayer_start -= 4;
+      *slayer_start -= block_len;
     }
     /* Remove top layer stem */
-    for _ in 0..4 { self.stems.remove(0); }
+    for _ in 0..block_len { self.stems.remove(0); }
     Ok(())
   }
   /// Reduces the height and width of the matrix the K2Tree represents by a factor of k without
@@ -566,21 +572,22 @@ impl K2Tree {
   /// 
   /// ```
   /// use k2_tree::K2Tree;
-  /// let mut tree = K2Tree::new();
+  /// let mut tree = K2Tree::new(2);
   /// tree.grow();
   /// assert_eq!(16, tree.matrix_width);
   /// unsafe { tree.shrink_unchecked(); }
   /// assert_eq!(8, tree.matrix_width);
   /// ```
   pub unsafe fn shrink_unchecked(&mut self) {
+    let block_len = self.block_len();
     self.matrix_width /= self.k;
     self.max_slayers -= 1;
     self.slayer_starts.remove(0);
     for slayer_start in &mut self.slayer_starts {
-      *slayer_start -= 4;
+      *slayer_start -= block_len;
     }
     /* Remove top layer stem */
-    for _ in 0..4 { self.stems.remove(0); }
+    for _ in 0..block_len { self.stems.remove(0); }
   }
   /// Comsumes the K2Tree to produce the bit-matrix it represented.
   /// 
@@ -588,7 +595,7 @@ impl K2Tree {
   /// ```
   /// fn main() -> Result<(), k2_tree::error::K2TreeError> {
   ///   use k2_tree::K2Tree;
-  ///   let mut tree = K2Tree::new();
+  ///   let mut tree = K2Tree::new(2);
   ///   tree.set(0, 0, true)?;
   ///   tree.set(5, 6, true)?;
   ///   tree.set(7, 7, true)?;
@@ -619,7 +626,7 @@ impl K2Tree {
   /// ```
   /// fn main() -> Result<(), k2_tree::error::K2TreeError> {
   ///   use k2_tree::K2Tree;
-  ///   let mut tree = K2Tree::new();
+  ///   let mut tree = K2Tree::new(2);
   ///   tree.set(0, 0, true)?;
   ///   tree.set(5, 6, true)?;
   ///   tree.set(7, 7, true)?;
@@ -649,13 +656,12 @@ impl K2Tree {
   /// All types that can produce rows of bits are valid inputs.
   /// ```
   /// use k2_tree::{K2Tree, matrix::BitMatrix};
-  /// let t = K2Tree::new();
   /// let mut m = BitMatrix::with_dimensions(8, 8);
   /// m.set(0, 5, true);
-  /// assert!(K2Tree::from_matrix(m).is_ok());
+  /// assert!(K2Tree::from_matrix(m, 2).is_ok());
   /// ```
-  pub fn from_matrix(matrix: BitMatrix) -> Result<Self> {
-    let mut tree = K2Tree::new();
+  pub fn from_matrix(matrix: BitMatrix, k: usize) -> Result<Self> {
+    let mut tree = K2Tree::new(k);
     while matrix.width > tree.matrix_width
     || matrix.height > tree.matrix_width {
       tree.grow();
@@ -715,7 +721,7 @@ impl PartialEq for K2Tree {
 impl Eq for K2Tree {}
 impl Default for K2Tree {
   fn default() -> Self {
-    Self::new()
+    Self::new(2)
   }
 }
 impl std::hash::Hash for K2Tree {
@@ -726,18 +732,11 @@ impl std::hash::Hash for K2Tree {
     self.leaves.hash(state);
   }
 }
-impl std::convert::TryFrom<BitMatrix> for K2Tree {
-  type Error = Error;
-  fn try_from(matrix: BitMatrix) -> Result<Self> {
-    //error checking needed
-    Self::from_matrix(matrix)
-  }
-}
 
 /* Private */
 enum DescendResult {
-  Leaf(usize, Range), //leaf_start, leaf_range
-  Stem(usize, Range), //stem_start, stem_range
+  Leaf(usize, Range2D), //leaf_start, leaf_range
+  Stem(usize, Range2D), //stem_start, stem_range
 }
 struct DescendEnv {
   /* Allows for descend to be recursive without parameter hell */
@@ -746,10 +745,9 @@ struct DescendEnv {
   slayer_max: usize,
 }
 impl K2Tree {
-  fn layer_from_range(&self, r: Range) -> usize {
-    let r_width = r[0][1]-r[0][0]+1;
+  fn layer_from_range(&self, r: Range2D) -> usize {
     ((self.matrix_width as f64).log(self.k as f64) as usize)
-    - ((r_width as f64).log(self.k as f64) as usize)
+    - ((r.width() as f64).log(self.k as f64) as usize)
   }
   fn matrix_bit(&self, x: usize, y: usize, m_width: usize) -> Result<DescendResult> {
     let env = DescendEnv {
@@ -757,16 +755,12 @@ impl K2Tree {
       y,
       slayer_max: self.max_slayers-1,
     };
-    self.descend(&env, 0, 0, [[0, m_width-1], [0, m_width-1]])
+    self.descend(&env, 0, 0, Range2D::new(0, m_width-1, 0, m_width-1))
   }
-  fn descend(&self, env: &DescendEnv, layer: usize, stem_pos: usize, range: Range) -> Result<DescendResult> {
-    // TODO: Completely remove all uses of old Range type, convert to Range2D
-    //       Make generic over any K value, not just 2
-    let range2d = Range2D::from_range(range);
-    let subranges2d = self.to_subranges(range2d).unwrap();
+  fn descend(&self, env: &DescendEnv, layer: usize, stem_pos: usize, range: Range2D) -> Result<DescendResult> {
+    let subranges = self.to_subranges(range).unwrap(); //TODO: add error value
     for (child_pos, child) in self.stems[stem_pos..stem_pos+self.block_len()].iter().enumerate() {
-      if subranges2d.subranges[child_pos].contains(env.x, env.y) {
-      // if within_range(&subranges[child_pos], env.x, env.y) {
+      if subranges.subranges[child_pos].contains(env.x, env.y) {
         if !child { return Ok(DescendResult::Stem(stem_pos, range)) } //The bit exists within a range that has all zeros
         else if layer == env.slayer_max {
           let leaf_start = match self.leaf_start(stem_pos + child_pos) {
@@ -776,7 +770,7 @@ impl K2Tree {
               y: env.y
             }),
           };
-          return Ok(DescendResult::Leaf(leaf_start, subranges2d.subranges[child_pos].to_range()))
+          return Ok(DescendResult::Leaf(leaf_start, subranges.subranges[child_pos]))
         }
         else {
           let child_stem = match self.child_stem(layer, stem_pos, child_pos) {
@@ -789,7 +783,7 @@ impl K2Tree {
           return self.descend(env,
                               layer+1,
                               child_stem,
-                              subranges2d.subranges[child_pos].to_range())
+                              subranges.subranges[child_pos])
         }
       }
     }
@@ -803,7 +797,7 @@ impl K2Tree {
     if let Some(leaf_num) = self.stem_to_leaf.iter().position(|&n|
       n == (stem_bitpos - self.slayer_starts[self.max_slayers-1])
     ) {
-      return Ok(leaf_num * 4)
+      return Ok(leaf_num * self.block_len())
     }
     Err(())
   }
@@ -814,7 +808,7 @@ impl K2Tree {
       return Err(())
     }
     Ok(self.layer_start(layer+1)
-    + (self.num_stems_before_child(stem_start+nth_child, layer) * 4))
+    + (self.num_stems_before_child(stem_start+nth_child, layer) * self.block_len()))
   }
 }
 
@@ -870,16 +864,16 @@ mod api {
       stem_to_leaf: vec![],
       leaves: bitvec![],
     };
-    assert_eq!(K2Tree::new(), expected);
+    assert_eq!(K2Tree::new(2), expected);
   }  
   #[test]
   fn is_empty_0() {
-    let tree = K2Tree::new();
+    let tree = K2Tree::new(2);
     assert!(tree.is_empty());
   }
   #[test]
   fn is_empty_1() -> Result<()> {
-    let mut tree = K2Tree::new();
+    let mut tree = K2Tree::new(2);
     tree.set(0, 0, true)?;
     assert!(!tree.is_empty());
     tree.set(0, 0, false)?;
@@ -958,7 +952,7 @@ mod api {
   }
   #[test]
   fn set_0() -> Result<()> {
-    let mut tree = K2Tree::new();
+    let mut tree = K2Tree::new(2);
     assert_eq!(false, tree.get(0, 0).unwrap());
     tree.set(0, 0, true)?;
     assert_eq!(true, tree.get(0, 0).unwrap());
@@ -979,7 +973,7 @@ mod api {
   }
   #[test]
   fn set_1() -> Result<()> {
-    let mut tree = K2Tree::new();
+    let mut tree = K2Tree::new(2);
     tree.grow();
     for i in 0..256 {
       let [x, y] = [i%16, i/16];
@@ -992,9 +986,9 @@ mod api {
   }
   #[test]
   fn matrix_width_and_grow() {
-    assert_eq!(8, K2Tree::new().matrix_width);
+    assert_eq!(8, K2Tree::new(2).matrix_width);
     assert_eq!(8, K2Tree::test_tree().matrix_width);
-    let mut grown_tree = K2Tree::new(); grown_tree.grow();
+    let mut grown_tree = K2Tree::new(2); grown_tree.grow();
     assert_eq!(16, grown_tree.matrix_width);
     grown_tree.grow();
     assert_eq!(32, grown_tree.matrix_width);
@@ -1003,7 +997,7 @@ mod api {
   }
   #[test]
   fn k() {
-    assert_eq!(2, K2Tree::new().k);
+    assert_eq!(2, K2Tree::new(2).k);
     assert_eq!(2, K2Tree::test_tree().k);
   }
   #[test]
@@ -1059,7 +1053,7 @@ mod api {
   }
   #[test]
   fn shrink_if_possible() {
-    let mut tree = K2Tree::new();
+    let mut tree = K2Tree::new(2);
     tree.grow();
     assert_eq!(16, tree.matrix_width);
     tree.shrink_if_possible();
@@ -1069,7 +1063,7 @@ mod api {
   }
   #[test]
   fn shrink() {
-    let mut tree = K2Tree::new();
+    let mut tree = K2Tree::new(2);
     tree.grow();
     assert_eq!(16, tree.matrix_width);
     assert!(tree.shrink().is_ok());
@@ -1079,7 +1073,7 @@ mod api {
   }
   #[test]
   fn shrink_unchecked() {
-    let mut tree = K2Tree::new();
+    let mut tree = K2Tree::new(2);
     tree.grow();
     assert_eq!(16, tree.matrix_width);
     unsafe { tree.shrink_unchecked(); }
@@ -1108,7 +1102,7 @@ mod api {
       stem_to_leaf: vec![0, 1, 3, 4, 8],
       leaves: bitvec![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0]
     };
-    assert_eq!(tree, K2Tree::from_matrix(m)?);
+    assert_eq!(tree, K2Tree::from_matrix(m, 2)?);
     Ok(())
   }
   #[test]
@@ -1125,7 +1119,7 @@ mod api {
       0,0,0,0, 0,0,0,0,
     ];
     let m = BitMatrix::from_bits(8, 8, bits);
-    let new_m = K2Tree::from_matrix(m.clone())?.to_matrix()?;
+    let new_m = K2Tree::from_matrix(m.clone(), 2)?.to_matrix()?;
     assert_eq!(m, new_m);
     Ok(())
   }
@@ -1143,7 +1137,7 @@ mod api {
       0,0,0,0, 0,0,0,0,
     ];
     let m = BitMatrix::from_bits(8, 8, bits);
-    let new_m = K2Tree::from_matrix(m.clone())?.into_matrix()?;
+    let new_m = K2Tree::from_matrix(m.clone(), 2)?.into_matrix()?;
     assert_eq!(m, new_m);
     Ok(())
   }
@@ -1260,7 +1254,7 @@ mod misc {
   fn flood() -> Result<()> {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    let mut tree = K2Tree::new();
+    let mut tree = K2Tree::new(2);
     for _ in 0..10 { tree.grow(); }
     for _ in 0..500 {
       let x: usize = rng.gen_range(0, 512);
@@ -1278,5 +1272,75 @@ mod misc {
   fn is_sync() {
     fn assert_sync<T: Sync>() {}
     assert_sync::<K2Tree>();
+  }
+}
+
+#[cfg(test)]
+mod variable_k {
+  use super::*;
+  #[test]
+  fn new() {
+    let expected = K2Tree {
+      matrix_width: 27,
+      k: 3,
+      max_slayers: 2,
+      slayer_starts: vec![0],
+      stems: bitvec![0,0,0,0,0,0,0,0,0],
+      stem_to_leaf: vec![],
+      leaves: bitvec![],
+    };
+    assert_eq!(K2Tree::new(3), expected);
+  }
+  #[test]
+  fn from_matrix() -> Result<()> {
+    let bits = bitvec![
+      0,0,0, 0,0,0, 0,0,0,  0,1,0, 1,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  1,0,0, 1,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,1, 1,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+
+      1,0,0, 0,0,0, 0,0,0,  0,1,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  1,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      
+      1,0,0, 0,0,0, 0,0,0,  0,1,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  1,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+      0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
+    ];
+    let m = BitMatrix::from_bits(27, 27, bits);
+    let tree = K2Tree {
+      matrix_width: 27,
+      k: 3,
+      max_slayers: 2,
+      slayer_starts: vec![0, 9],
+      stems:  bitvec![
+        0,1,0,1,1,0,1,1,0, 1,1,0,0,0,0,0,0,0, 1,0,0,0,0,0,0,0,0,
+        1,0,0,0,0,0,0,0,0, 1,0,0,0,0,0,0,0,0, 1,0,0,0,0,0,0,0,0
+      ],
+      stem_to_leaf: vec![0, 1, 9, 18, 27, 36],
+      leaves: bitvec![
+        0,1,0,1,0,0,0,0,1, 1,0,0,1,0,0,1,0,0, 1,0,0,0,0,0,0,0,0,
+        0,1,0,1,0,0,0,0,0, 1,0,0,0,0,0,0,0,0, 0,1,0,1,0,0,0,0,0,
+      ]
+    };
+    assert_eq!(tree, K2Tree::from_matrix(m, 3)?);
+    Ok(())
   }
 }

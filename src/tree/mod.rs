@@ -25,7 +25,7 @@ impl K2Tree {
     }
     self.slayer_starts[l+1] - self.slayer_starts[l]
   }
-  fn get_coords(&self, leaf_bit_pos: usize) -> [usize; 2] {
+  fn get_coords(&self, leaf_bit_pos: usize) -> [usize; 2] { //TODO
     /* Start at the leaf_bit and traverse our way up to the top of the tree,
     keeping track of the path we took on our way up in terms of
     bit-positions (offsets) in the stems. Then, traverse back down the same
@@ -57,9 +57,9 @@ impl K2Tree {
     }
   }
   fn leaf_parent(&self, bit_pos: usize) -> usize {
-    self.layer_start(self.max_slayers-1) + self.stem_to_leaf[bit_pos / 4]
+    self.layer_start(self.max_slayers-1) + self.stem_to_leaf[bit_pos / self.block_len()]
   }
-  fn parent(&self, stem_start: usize) -> (usize, usize) {
+  fn parent(&self, stem_start: usize) -> (usize, usize) { //TODO
     /* Returns (stem_start, bit_offset) */
     if stem_start < self.slayer_starts[1] {
       return (std::usize::MAX, std::usize::MAX)
@@ -75,6 +75,7 @@ impl K2Tree {
     /* Find the nth stem it is in the layer */
     let stem_num = (stem_start - stem_layer)/4;
     /* Find the nth 1 in the parent layer */
+    dbg!(self.slayer_starts.len(), stem_layer, stem_num);
     let parent_bit = one_positions_range(
       &self.stems,
       self.slayer_starts[stem_layer-1],
@@ -100,28 +101,6 @@ impl K2Tree {
   fn block_start(&self, bit_pos: usize) -> usize {
     (bit_pos / self.block_len()) * self.block_len()
   }
-  fn remove_block(&mut self, bv: &mut BitVec, block_start: usize) -> std::result::Result<(), ()> {
-    let block_len = self.block_len();
-    if block_start > (bv.len() - block_len)
-    || block_start % block_len != 0 {
-      Err(())
-    }
-    else {
-      for _ in 0..block_len { bv.remove(block_start); }
-      Ok(())
-    }
-  }
-  fn insert_block(&mut self, bv: &mut BitVec, block_start: usize) -> std::result::Result<(), ()> {
-    let block_len = self.block_len();
-    if block_start > bv.len()
-    || block_start % block_len != 0 {
-      Err(())
-    }
-    else {
-      for _ in 0..block_len { bv.insert(block_start, false); }
-      Ok(())
-    }
-  }
   fn to_subranges(&self, r: Range2D) -> std::result::Result<SubRanges, ()> {
     SubRanges::from_range(r, self.k, self.k)
   }
@@ -130,23 +109,23 @@ impl K2Tree {
 const fn block_start(bit_pos: usize) -> usize {
   (bit_pos / 4) * 4
 }
-fn remove_block(bit_vec: &mut BitVec, block_start: usize) -> std::result::Result<(), ()> {
-  if block_start > bit_vec.len()-4
-  || block_start % 4 != 0 {
+fn remove_block(bit_vec: &mut BitVec, block_start: usize, block_len: usize) -> std::result::Result<(), ()> {
+  if block_start > bit_vec.len()-block_len
+  || block_start % block_len != 0 {
     Err(())
   }
   else {
-    for _ in 0..4 { bit_vec.remove(block_start); }
+    for _ in 0..block_len { bit_vec.remove(block_start); }
     Ok(())
   }
 }
-fn insert_block(bit_vec: &mut BitVec, block_start: usize) -> std::result::Result<(), ()> {
+fn insert_block(bit_vec: &mut BitVec, block_start: usize, block_len: usize) -> std::result::Result<(), ()> {
   if block_start > bit_vec.len()
-  || block_start % 4 != 0 {
+  || block_start % block_len != 0 {
     Err(())
   }
   else {
-    for _ in 0..4 { bit_vec.insert(block_start, false); }
+    for _ in 0..block_len { bit_vec.insert(block_start, false); }
     Ok(())
   }
 }
@@ -157,9 +136,6 @@ const fn to_4_subranges(r: Range) -> [Range; 4] {
     [[r[0][0], r[0][0]+((r[0][1]-r[0][0])/2)],   [r[1][0]+((r[1][1]-r[1][0])/2)+1, r[1][1]]], //Bottom left quadrant
     [[r[0][0]+((r[0][1]-r[0][0])/2)+1, r[0][1]], [r[1][0]+((r[1][1]-r[1][0])/2)+1, r[1][1]]]  //Bottom right quadrant
   ]
-}
-fn within_range(r: &Range, x: usize, y: usize) -> bool {
-  x >= r[0][0] && x <= r[0][1] && y >= r[1][0] && y <= r[1][1]
 }
 fn ones_in_range(bits: &BitVec, begin: usize, end: usize) -> usize {
   bits[begin..end].into_iter().fold(0, |total, bit| total + *bit as usize)
@@ -220,13 +196,12 @@ impl SubRanges {
       subranges
     })
   }
-  fn get(&self, x: usize, y: usize) -> Range2D {
-    let index: usize = (y * self.width) + x;
-    self.subranges[index].clone()
+  fn iter(&self) -> impl Iterator<Item=&Range2D> {
+    self.subranges.iter()
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct Range2D {
   pub min_x: usize,
   pub max_x: usize,
