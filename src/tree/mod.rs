@@ -136,20 +136,20 @@ fn ones_in_range(bits: &BitVec, begin: usize, end: usize) -> usize {
 fn all_zeroes(bits: &BitVec, begin: usize, end: usize) -> bool {
   bits[begin..end].into_iter().fold(true, |total, bit| total & !bit)
 }
-#[allow(dead_code)] //very may well need this later
-fn one_positions(bits: &BitVec) -> Vec<usize> {
+fn one_positions(bits: impl Iterator<Item=bool>) -> Vec<usize> {
   bits
-  .iter()
   .enumerate()
   .filter_map(
     |(pos, bit)|
-    if *bit { Some(pos) }
+    if bit { Some(pos) }
     else   { None })
   .collect()
 }
 fn one_positions_range(bits: &BitVec, begin: usize, end: usize) -> Vec<usize> {
-  bits[begin..end].into_iter().enumerate().filter_map(|(pos, bit)|
-    if *bit { Some(pos) } else { None }
+  bits[begin..end].into_iter().enumerate()
+  .filter_map(|(pos, bit)|
+    if *bit { Some(pos) }
+    else    { None }
   ).collect()
 }
 
