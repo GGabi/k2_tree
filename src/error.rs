@@ -1,6 +1,11 @@
 /// Errors produced as a result of interactions with the K2Tree object.
 #[derive(Clone, Debug)]
 pub enum K2TreeError {
+  /// Produced when a user attempts to create a K2Tree with a k values below 2.
+  SmallKValue {
+    ///
+    k: u8,
+  },
   /// Produced when a problem occurs attempting to traverse a K2Tree.
   /// 
   /// This mostly appears because the internal state of K2Tree is corrupted,
@@ -94,6 +99,7 @@ impl std::fmt::Display for K2TreeError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     use K2TreeError::*;
     match self {
+      SmallKValue{k} => write!(f, "Attempt to create a K2Tree with a k value of {}, which less than the minimum of 2.", k),
       TraverseError{x, y} => write!(f, "Error encountered while traversing K2Tree for value at coordinates ({}, {})", x, y),
       OutOfBounds {
         x_y: [x, y],
@@ -109,6 +115,13 @@ impl std::fmt::Display for K2TreeError {
       Read{source} => write!(f, "Error during read: {}", source),
       Write{source} => write!(f, "Error during write: {}", source),
       BitMatrixError{source} => write!(f, "{}", source),
+    }
+  }
+}
+impl From<BitMatrixError> for K2TreeError {
+  fn from(error: BitMatrixError) -> Self {
+    K2TreeError::BitMatrixError {
+      source: Box::new(error)
     }
   }
 }
