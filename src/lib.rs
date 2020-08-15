@@ -74,11 +74,11 @@ And then the `K2Tree` is built from this modified matrix:
 
 ```ignore
                0111
-            ____|||________
-            |    |         |
-          1101 1100      0100
-  |----|----|    |----|    |
-1000 1011 0010 1010 1000 1100
+          ______|||________
+          |     |         |
+          1101  1100      0100
+|----|----|     |----|    |
+1000 1011 0010  1010 1000 1100
 ```
 
 In the first layer of the tree, each bit refers to one of the 4 largest quadrants in the modified matrix in the order:
@@ -104,9 +104,11 @@ The final layer is referred to as the leaf-layer and contains the actual data in
 
 Finally, the above `K2Tree` is stored as a series of bits:
 
-`0111::1101,1100,0100::1000,1011,0010,1010,1000,1100`
+`[0111; 1101, 1100, 0100; 1000, 1011, 0010, 1010, 1000, 1100]`
 
-(Where `::` separates layers and `,` separates blocks)
+(Where `;` separates layers and `,` separates blocks)
+
+-- groels
 */
 
 pub use tree::K2Tree;

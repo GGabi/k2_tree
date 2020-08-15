@@ -747,13 +747,13 @@ impl core::fmt::Display for K2Tree {
         else { s.push('0'); }
         if i == self.k*self.k
         && (bit_pos - self.layer_start(layer_num)) < self.layer_len(layer_num)-1 {
-          s.push(',');
+          s.push_str(", ");
           i = 1;
         } 
         else { i += 1; }
       }
       i = 1;
-      s.push_str("::");
+      s.push_str("; ");
     }
     i = 1;
     for bit_pos in 0..self.leaves.len() {
@@ -761,7 +761,7 @@ impl core::fmt::Display for K2Tree {
       else { s.push('0'); }
       if i == self.k*self.k
       && bit_pos < self.leaves.len()-1 {
-        s.push(',');
+        s.push_str(", ");
         i = 1;
       } 
       else { i += 1; }
@@ -1617,5 +1617,9 @@ mod misc {
   fn is_sync() {
     fn assert_sync<T: Sync>() {}
     assert_sync::<K2Tree>();
+  }
+  #[test]
+  fn display() {
+    println!("{}", K2Tree::test_tree(3));
   }
 }
