@@ -45,6 +45,7 @@ pub struct Stems<'a> {
 impl<'a> Iterator for Stems<'a> {
   type Item = StemBit;
   fn next(&mut self) -> Option<Self::Item> {
+    let block_len = self.tree.block_len();
     if self.pos >= self.tree.stems.len() {
       return None
     }
@@ -57,9 +58,9 @@ impl<'a> Iterator for Stems<'a> {
     });
     /* Increment the iterator's state for next value */
     self.pos += 1;
-    if self.bit == 3 {
+    if self.bit == block_len-1 {
       self.bit = 0;
-      if self.stem == (self.tree.layer_len(self.layer)/4)-1 {
+      if self.stem == (self.tree.layer_len(self.layer) / block_len) - 1 {
         self.stem = 0;
         self.layer += 1;
       }

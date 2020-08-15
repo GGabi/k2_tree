@@ -118,6 +118,13 @@ impl std::fmt::Display for K2TreeError {
     }
   }
 }
+impl From<BitMatrixError> for K2TreeError {
+  fn from(error: BitMatrixError) -> Self {
+    K2TreeError::BitMatrixError {
+      source: Box::new(error)
+    }
+  }
+}
 
 /// Errors produced as a result of interactions with the BitMatrix object.
 #[derive(Clone, Debug)]
