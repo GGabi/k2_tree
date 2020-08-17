@@ -200,7 +200,13 @@ impl K2Tree {
     }
     let mut ret_v = Vec::new();
     for x in (0..self.matrix_width).step_by(self.k) {
-      match self.matrix_bit(x, y, self.matrix_width)? {
+      let descend_result = match self.matrix_bit(x, y, self.matrix_width) {
+        Ok(dr) => dr,
+        Err(e) => return Err(Error::Read {
+          source: Box::new(e)
+        }),
+      };
+      match descend_result {
         DescendResult::Leaf(leaf_start, leaf_range) => {
           if leaf_range.width() != self.k
           || leaf_range.height() != self.k {
@@ -247,7 +253,13 @@ impl K2Tree {
     }
     let mut ret_v = Vec::new();
     for y in (0..self.matrix_width).step_by(self.k) {
-      match self.matrix_bit(x, y, self.matrix_width)? {
+      let descend_result = match self.matrix_bit(x, y, self.matrix_width) {
+        Ok(dr) => dr,
+        Err(e) => return Err(Error::Read {
+          source: Box::new(e)
+        }),
+      };
+      match descend_result{
         DescendResult::Leaf(leaf_start, leaf_range) => {
           if leaf_range.width() != self.k
           || leaf_range.height() != self.k {
@@ -295,7 +307,7 @@ impl K2Tree {
           })
         }
         /* Set the bit in the leaf to the new state */
-        let offset = (self.k * (y - leaf_range.min_y)) + (x - leaf_range.min_x); //TODO: Check
+        let offset = (self.k * (y - leaf_range.min_y)) + (x - leaf_range.min_x);
         self.leaves.set(leaf_start+offset, state);
         /* If leaf is now all 0's, remove leaf and alter rest of struct to reflect changes.
         Loop up the stems changing the parent bits to 0's and removing stems that become all 0's */
@@ -381,7 +393,16 @@ impl K2Tree {
         which points to the leaves */
         while layer < self.max_slayers-1 {
           fresh_stem = true;
-          subranges = self.to_subranges(stem_range).unwrap(); // TODO: Add a new error
+          subranges = match self.to_subranges(stem_range) {
+            Ok(subranges) => subranges,
+            Err(error) => return Err(Error::CorruptedK2Tree {
+              source: Box::new(Error::Write {
+                source: Box::new(Error::SubRangesError {
+                  source: Box::new(error),
+                }),
+              }),
+            })
+          };
           let (child_pos, &subrange) =
             match subranges.iter().enumerate().find(
               |(_, subrange)| subrange.contains(x, y)
@@ -437,7 +458,16 @@ impl K2Tree {
           }
         }
         /* We're at the final stem layer */
-        subranges = self.to_subranges(stem_range).unwrap(); //TODO: add new error
+        subranges = match self.to_subranges(stem_range) {
+          Ok(subranges) => subranges,
+          Err(error) => return Err(Error::CorruptedK2Tree {
+            source: Box::new(Error::Write {
+              source: Box::new(Error::SubRangesError {
+                source: Box::new(error),
+              }),
+            }),
+          })
+        };
         let (child_pos, &subrange) =
           match subranges.iter().enumerate().find(
             |(_, subrange)| subrange.contains(x, y)
@@ -817,7 +847,7 @@ impl K2Tree {
     self.descend(&env, 0, 0, Range2D::new(0, m_width-1, 0, m_width-1))
   }
   fn descend(&self, env: &DescendEnv, layer: usize, stem_pos: usize, range: Range2D) -> Result<DescendResult> {
-    let subranges = self.to_subranges(range).unwrap(); //TODO: add error value
+    let subranges = self.to_subranges(range)?;
     for (child_pos, child) in self.stems[stem_pos..stem_pos+self.block_len()].iter().enumerate() {
       if subranges[child_pos].contains(env.x, env.y) {
         if !child { return Ok(DescendResult::Stem(stem_pos, range)) } //The bit exists within a range that has all zeros
@@ -900,7 +930,7 @@ impl K2Tree {
           0,1,0,1,0,0,0,0,0, 1,0,0,0,0,0,0,0,0, 0,1,0,1,0,0,0,0,0,
         ]
       },
-      4 => K2Tree { //TODO: Check integrity
+      4 => K2Tree {
         matrix_width: 64,
         k: 4,
         max_slayers: 2,

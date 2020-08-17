@@ -105,7 +105,7 @@ impl K2Tree {
   fn block_start(&self, bit_pos: usize) -> usize {
     (bit_pos / self.block_len()) * self.block_len()
   }
-  fn to_subranges(&self, r: Range2D) -> std::result::Result<SubRanges, ()> {
+  fn to_subranges(&self, r: Range2D) -> std::result::Result<SubRanges, crate::error::SubRangesError> {
     SubRanges::from_range(r, self.k, self.k)
   }
 }
@@ -164,11 +164,15 @@ struct SubRanges {
   subranges: Vec<Range2D>,
 }
 impl SubRanges {
-  fn from_range(r: Range2D, w: usize, h: usize) -> std::result::Result<Self, ()> {
+  fn from_range(r: Range2D, w: usize, h: usize) -> std::result::Result<Self, crate::error::SubRangesError> {
     // If the range cannot be evenly divided up by w and h, break
     if r.width() / w * w != r.width()
     || r.height() / h * h != r.height() {
-      return Err(())
+      return Err(crate::error::SubRangesError::CannotSubdivideRange {
+        range: [[r.min_x, r.min_y], [r.max_x, r.max_y]],
+        horizontal_subdivisions: w,
+        vertical_subdivisions: h,
+      })
     }
     let mut subranges: Vec<Range2D> = Vec::new();
     let sub_width = r.width() / w;

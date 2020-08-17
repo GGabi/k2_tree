@@ -81,6 +81,11 @@ pub enum K2TreeError {
   BitMatrixError {
     ///
     source: Box<BitMatrixError>,
+  },
+  /// Propogation of a SubRangesError.
+  SubRangesError {
+    ///
+    source: Box<SubRangesError>,
   }
 }
 impl std::error::Error for K2TreeError {
@@ -91,6 +96,7 @@ impl std::error::Error for K2TreeError {
       Read{source} => Some(source),
       Write{source} => Some(source),
       BitMatrixError{source} => Some(source),
+      SubRangesError{source} => Some(source),
       _ => None,
     }
   }
@@ -115,6 +121,7 @@ impl std::fmt::Display for K2TreeError {
       Read{source} => write!(f, "Error during read: {}", source),
       Write{source} => write!(f, "Error during write: {}", source),
       BitMatrixError{source} => write!(f, "{}", source),
+      SubRangesError{source} => write!(f, "{}", source),
     }
   }
 }
@@ -122,6 +129,13 @@ impl From<BitMatrixError> for K2TreeError {
   fn from(error: BitMatrixError) -> Self {
     K2TreeError::BitMatrixError {
       source: Box::new(error)
+    }
+  }
+}
+impl From<SubRangesError> for K2TreeError {
+  fn from(error: SubRangesError) -> Self {
+    K2TreeError::SubRangesError {
+      source: Box::new(error),
     }
   }
 }
@@ -151,6 +165,35 @@ impl std::fmt::Display for BitMatrixError {
         x_y: [x, y],
         max_x_y: [max_x, max_y],
       } => write!(f, "Attempts to access a bit at coordinates({}, {}) which are not in the range of the matrix: (0, 0) -> ({}, {})", x, y, max_x, max_y),
+    }
+  }
+}
+
+/// Errors produced as a result of interactions with the SubRanges object.
+#[derive(Clone, Debug)]
+pub enum SubRangesError {
+  /// Produced when a user attempts a Range2D cannot be evenly subdivided
+  /// by the requested number of subranges.
+  CannotSubdivideRange {
+    range: [[usize; 2]; 2],
+    horizontal_subdivisions: usize,
+    vertical_subdivisions: usize,
+  }
+}
+impl std::error::Error for SubRangesError {
+  fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    None
+  }
+}
+impl std::fmt::Display for SubRangesError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    use SubRangesError::*;
+    match self {
+      CannotSubdivideRange {
+        range: [[min_x, max_x], [min_y, max_y]],
+        horizontal_subdivisions: hs,
+        vertical_subdivisions: vs, 
+      } => write!(f, "The 2D range ({}, {}) -> ({}, {}) could not be evenly subdivided {} times horizontally or {} times vertically.", min_x, min_y, max_x, max_y, hs, vs),
     }
   }
 }
