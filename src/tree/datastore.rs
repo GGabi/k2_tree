@@ -34,7 +34,7 @@ pub struct K2Tree {
   /// so this is also the height.
   pub matrix_width: usize,
   /// The k value of the K2Tree, currently fixed at 2.
-  pub k: usize,
+  pub k: usize, //TODO: separate stem_k from leaf_k
   /// The maximum number of stem-layers possible given the matrix_width.
   pub max_slayers: usize,
   /// The index of the first bit in each stem-layer in stems.
@@ -47,7 +47,7 @@ pub struct K2Tree {
   /// relative to the the start of the final stem-layer. The index
   /// of each element corresponds to the position of the leaf-block
   /// it links to.
-  pub stem_to_leaf: Vec<usize>,
+  pub stem_to_leaf: Vec<usize>, //TODO: find a way to remove this field without significantly increasing complexity
   /// The bits that comprise the leaves of the tree.
   pub leaves: BitVec,
 }
@@ -539,6 +539,13 @@ impl K2Tree {
   /// bit in the stems.
   pub fn stems(&self) -> iterators::Stems<'_> {
     iterators::Stems::new(self)
+  }
+  /// Consumes the K2Tree to return an iterator over its stems, which produces instances of StemBit.
+  /// 
+  /// StemBit contains extra information on the layer, block and offset of the specific
+  /// bit in the stems.
+  pub fn into_stems(self) -> iterators::IntoStems {
+    iterators::IntoStems::new(self)
   }
   /// Returns an iterator over the K2Tree's stems which produces only the raw boolean values.
   pub fn stems_raw(&self) -> iterators::StemsRaw<'_> {
@@ -1387,12 +1394,16 @@ mod api {
     let values = bitbox![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0];
     let xs     =        [4,5,4,5, 6,7,6,7, 6,7,6,7, 0,1,0,1, 4,5,4,5];
     let ys     =        [0,0,1,1, 0,0,1,1, 2,2,3,3, 4,4,5,5, 4,4,5,5];
+    let leaves =        [0,0,0,0, 1,1,1,1, 2,2,2,2, 3,3,3,3, 4,4,4,4];
+    let bits   =        [0,1,2,3, 0,1,2,3, 0,1,2,3, 0,1,2,3, 0,1,2,3];
     for (i, leaf) in tree.leaves().enumerate() {
       assert_eq!(
         iterators::LeafBit {
           value: values[i],
           x: xs[i],
           y: ys[i],
+          leaf: leaves[i],
+          bit: bits[i],
         },
         leaf
       );
@@ -1415,12 +1426,22 @@ mod api {
       9,9,9,10,10,10,11,11,11, 9,9,9,10,10,10,11,11,11,
       18,18,18,19,19,19,20,20,20, 18,18,18,19,19,19,20,20,20
     ];
+    let leaves = [
+      0,0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,1, 2,2,2,2,2,2,2,2,2,
+      3,3,3,3,3,3,3,3,3, 4,4,4,4,4,4,4,4,4, 5,5,5,5,5,5,5,5,5,
+    ];
+    let bits = [
+      0,1,2,3,4,5,6,7,8, 0,1,2,3,4,5,6,7,8, 0,1,2,3,4,5,6,7,8,
+      0,1,2,3,4,5,6,7,8, 0,1,2,3,4,5,6,7,8, 0,1,2,3,4,5,6,7,8
+    ];
     for (i, leaf) in tree.leaves().enumerate() {
       assert_eq!(
         iterators::LeafBit {
           value: values[i],
           x: xs[i],
           y: ys[i],
+          leaf: leaves[i],
+          bit: bits[i],
         },
         dbg!(leaf)
       );

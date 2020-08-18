@@ -1,3 +1,18 @@
+/*!
+These are all the custom errors that this library could return.
+
+This library uses a nesting system to convey the most useful information 
+while minimising the number of unique enumerations required:
+- CorruptedK2Tree:
+  - The K2Tree is *likely* to have been corrupted by the operation that resulted in this error.
+- Read:
+  - The error occured during a Read operation, meaning that the state of the K2Tree could
+    not have been changed by the operation that resulted in this error.
+- Write:
+  - The error occured during a Write operation, meaning that the state of the K2Tree *may*
+    have been changed by the operation that resulted in this error.
+*/
+
 /// Errors produced as a result of interactions with the K2Tree object.
 #[derive(Clone, Debug)]
 pub enum K2TreeError {
@@ -175,8 +190,11 @@ pub enum SubRangesError {
   /// Produced when a user attempts a Range2D cannot be evenly subdivided
   /// by the requested number of subranges.
   CannotSubdivideRange {
+    /// The range which could not be subdivided.
     range: [[usize; 2]; 2],
+    /// The attempted number of horizontal subdivisions.
     horizontal_subdivisions: usize,
+    /// The attempted number of vertical subdivisions.
     vertical_subdivisions: usize,
   }
 }
