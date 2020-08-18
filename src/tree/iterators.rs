@@ -17,6 +17,7 @@ pub struct StemBit {
   /// The index of the bit within its stem.
   pub bit: usize,
 }
+
 /// A struct representing the value of a bit in a K2Tree's leaves.
 /// 
 /// This type is not intended to live for very long and
@@ -24,13 +25,16 @@ pub struct StemBit {
 /// so if the state of K2Tree changes then this could be invalid.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct LeafBit {
-  /* TODO: Add leaf and bit field, just like StemBit has */
   /// The value of the bit.
   pub value: bool,
   /// The x coordinate of the bit in the matrix the K2Tree represents.
   pub x: usize,
   /// The y coordinate of the bit in the matrix the K2Tree represents.
   pub y: usize,
+  /// The leaf number of the bit.
+  pub leaf: usize,
+  /// The index of the bit within its leaf.
+  pub bit: usize,
 }
 
 /// An iterator over a K2Tree's stems which produces instances of StemBit.
@@ -87,6 +91,60 @@ impl<'a> Stems<'a> {
   }
 }
 
+/// A consuming iterator over a K2Tree's stems which produces instances of StemBit.
+#[derive(Debug)]
+pub struct IntoStems {
+  tree: K2Tree,
+  pos: usize,
+  layer: usize,
+  stem: usize,
+  bit: usize,
+}
+impl Iterator for IntoStems {
+  type Item = StemBit;
+  fn next(&mut self) -> Option<Self::Item> {
+    let block_len = self.tree.block_len();
+    if self.pos >= self.tree.stems.len() {
+      return None
+    }
+    /* Grab the return value */
+    let ret_v = Some(StemBit {
+      value: self.tree.stems[self.pos],
+      layer: self.layer,
+      stem: self.stem,
+      bit: self.bit,
+    });
+    /* Increment the iterator's state for next value */
+    self.pos += 1;
+    if self.bit == block_len-1 {
+      self.bit = 0;
+      if self.stem == (self.tree.layer_len(self.layer) / block_len) - 1 {
+        self.stem = 0;
+        self.layer += 1;
+      }
+      else {
+        self.stem += 1;
+      }
+    }
+    else {
+      self.bit += 1;
+    }
+    ret_v
+  }
+}
+impl IntoStems {
+  /// Produces a Stems iterator from a reference to a K2Tree.
+  pub fn new(tree: K2Tree) -> Self {
+    Self {
+      tree,
+      pos: 0,
+      layer: 0,
+      stem: 0,
+      bit: 0,
+    }
+  }
+}
+
 /// An iterator over a K2Tree's leaves which produces instances of LeafBit.
 #[derive(Debug)]
 pub struct Leaves<'a> {
@@ -99,11 +157,15 @@ impl<'a> Iterator for Leaves<'a> {
     if self.pos == self.tree.leaves.len() { return None }
     let [x, y] = self.tree.get_coords(self.pos);
     let value = self.tree.leaves[self.pos];
+    let leaf = self.pos / self.tree.block_len();
+    let bit = self.pos % self.tree.block_len();
     self.pos += 1;
     Some(LeafBit {
       value,
       x,
       y,
+      leaf,
+      bit
     })
   }
 }
@@ -129,11 +191,15 @@ impl Iterator for IntoLeaves {
     if self.pos == self.tree.leaves.len() { return None }
     let [x, y] = self.tree.get_coords(self.pos);
     let value = self.tree.leaves[self.pos];
+    let leaf = self.pos / self.tree.block_len();
+    let bit = self.pos % self.tree.block_len();
     self.pos += 1;
     Some(LeafBit {
       value,
       x,
       y,
+      leaf,
+      bit
     })
   }
 }
