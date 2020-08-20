@@ -17,7 +17,7 @@ k2_tree = "0.3.2"
 
 Take a real-world example: representing Web-Graphs.
 The connections between webpages can be easily encoded as a 2-d bit-matrix, where each column/row corresponds to a specific page and each bit denotes whether two pages are joined via a hyperlink; 1 if yes, 0 in not.
-As it turns out, these matrices tend to be extremely sparse *most of the time*, which makes the `K2Tree` a perfect structure for encoding them.
+As it turns out, these matrices tend to be extremely sparse *most of the time*, which makes the `K2Tree` a perfect structure for encoding them!
 
 Another example is representing Triple-Stores, which [this repo](https://github.com/GGabi/RippleDB) demonstrates is effective.
 # Example:
@@ -37,6 +37,7 @@ Another example is representing Triple-Stores, which [this repo](https://github.
 ```
 ## Bit-Representation:
 `[0111; 1101, 1100, 0100; 1000, 1011, 0010, 1010, 1000, 1100]`
+
 (Where `;` separates layers and `,` separates blocks)
 ## Final `K2Tree`:
 ```rust
