@@ -46,7 +46,6 @@ impl K2Tree {
     // let mut range = [[0, self.matrix_width-1], [0, self.matrix_width-1]];
     for child_offset in offsets.into_iter().take(self.max_slayers) {
       range = self.to_subranges(range).unwrap()[child_offset];
-      // range = to_4_subranges(range)[child_offset];
     }
     let leaf_offset = leaf_bit_pos - self.leaf_start(leaf_bit_pos);
     let x = leaf_offset % self.leaf_k; //TODO: check
