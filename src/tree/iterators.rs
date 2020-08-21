@@ -49,7 +49,7 @@ pub struct Stems<'a> {
 impl<'a> Iterator for Stems<'a> {
   type Item = StemBit;
   fn next(&mut self) -> Option<Self::Item> {
-    let block_len = self.tree.block_len();
+    let block_len = self.tree.stem_len();  //TODO: check
     if self.pos >= self.tree.stems.len() {
       return None
     }
@@ -103,7 +103,7 @@ pub struct IntoStems {
 impl Iterator for IntoStems {
   type Item = StemBit;
   fn next(&mut self) -> Option<Self::Item> {
-    let block_len = self.tree.block_len();
+    let block_len = self.tree.stem_len(); //TODO
     if self.pos >= self.tree.stems.len() {
       return None
     }
@@ -157,8 +157,8 @@ impl<'a> Iterator for Leaves<'a> {
     if self.pos == self.tree.leaves.len() { return None }
     let [x, y] = self.tree.get_coords(self.pos);
     let value = self.tree.leaves[self.pos];
-    let leaf = self.pos / self.tree.block_len();
-    let bit = self.pos % self.tree.block_len();
+    let leaf = self.pos / self.tree.leaf_len();
+    let bit = self.pos % self.tree.leaf_len();
     self.pos += 1;
     Some(LeafBit {
       value,
@@ -191,8 +191,8 @@ impl Iterator for IntoLeaves {
     if self.pos == self.tree.leaves.len() { return None }
     let [x, y] = self.tree.get_coords(self.pos);
     let value = self.tree.leaves[self.pos];
-    let leaf = self.pos / self.tree.block_len();
-    let bit = self.pos % self.tree.block_len();
+    let leaf = self.pos / self.tree.leaf_len(); //TODO: check
+    let bit = self.pos % self.tree.leaf_len();
     self.pos += 1;
     Some(LeafBit {
       value,
