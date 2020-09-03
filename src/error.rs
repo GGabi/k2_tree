@@ -17,9 +17,14 @@ while minimising the number of unique enumerations required:
 #[derive(Clone, Debug)]
 pub enum K2TreeError {
   /// Produced when a user attempts to create a K2Tree with a k values below 2.
-  SmallKValue {
+  SmallStemKValue {
     ///
-    k: u8,
+    stem_k: u8,
+  },
+  /// Produced when a user attempts to create a K2Tree with a k values below 2.
+  SmallLeafKValue {
+    ///
+    leaf_k: u8,
   },
   /// Produced when a problem occurs attempting to traverse a K2Tree.
   /// 
@@ -120,7 +125,8 @@ impl std::fmt::Display for K2TreeError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     use K2TreeError::*;
     match self {
-      SmallKValue{k} => write!(f, "Attempt to create a K2Tree with a k value of {}, which less than the minimum of 2.", k),
+      SmallStemKValue{stem_k} => write!(f, "Attempt to create a K2Tree with a stem_k value of {}, which less than the minimum of 2.", stem_k),
+      SmallLeafKValue{leaf_k} => write!(f, "Attempt to create a K2Tree with a leaf_k value of {}, which less than the minimum of 2.", leaf_k),
       TraverseError{x, y} => write!(f, "Error encountered while traversing K2Tree for value at coordinates ({}, {})", x, y),
       OutOfBounds {
         x_y: [x, y],

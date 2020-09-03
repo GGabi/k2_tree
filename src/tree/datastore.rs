@@ -65,7 +65,8 @@ impl K2Tree {
   /// let tree = K2Tree::new();
   /// assert!(tree.is_empty());
   /// assert_eq!(8, tree.matrix_width);
-  /// assert_eq!(2, tree.stem_k); //TODO
+  /// assert_eq!(2, tree.stem_k);
+  /// assert_eq!(2, tree.leaf_k);
   /// ```
   pub fn new() -> Self {
     K2Tree {
@@ -89,13 +90,17 @@ impl K2Tree {
   ///   assert!(tree.is_empty());
   ///   assert_eq!(4usize.pow(3), tree.matrix_width);
   ///   assert_eq!(64, tree.matrix_width);
-  ///   assert_eq!(4, tree.stem_k); //TODO
+  ///   assert_eq!(4, tree.stem_k);
+  ///   assert_eq!(4, tree.leaf_k);
   ///   Ok(())
   /// }
   /// ``` 
   pub fn with_k(stem_k: usize, leaf_k: usize) -> Result<Self> {
-    if stem_k < 2 || leaf_k < 2 {
-      return Err(Error::SmallKValue { k: stem_k as u8 }) //TODO: proper error
+    if stem_k < 2 {
+      return Err(Error::SmallStemKValue { stem_k: stem_k as u8 })
+    }
+    else if leaf_k < 2 {
+      return Err(Error::SmallLeafKValue { leaf_k: leaf_k as u8 })
     }
     /* For now fix k as 2, further work to make it user-defined */
     let mw = leaf_k * stem_k.pow(2);
@@ -125,7 +130,7 @@ impl K2Tree {
   pub fn set_stem_k(&mut self, stem_k: usize) -> Result<()> {
     if self.stem_k == stem_k { return Ok(()) }
     if stem_k < 2 {
-      return Err(Error::SmallKValue{k: stem_k as u8})
+      return Err(Error::SmallStemKValue{stem_k: stem_k as u8})
     }
     *self = K2Tree::from_matrix(self.to_matrix()?, stem_k, self.leaf_k)?;
     Ok(())
@@ -145,7 +150,7 @@ impl K2Tree {
   pub fn set_leaf_k(&mut self, leaf_k: usize) -> Result<()> {
     if self.leaf_k == leaf_k { return Ok(()) }
     if leaf_k < 2 {
-      return Err(Error::SmallKValue{k: leaf_k as u8})
+      return Err(Error::SmallLeafKValue{leaf_k: leaf_k as u8})
     }
     *self = K2Tree::from_matrix(self.to_matrix()?, self.stem_k, leaf_k)?;
     Ok(())
