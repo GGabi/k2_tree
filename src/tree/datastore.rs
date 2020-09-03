@@ -392,11 +392,11 @@ impl K2Tree {
           && all_zeroes(&self.stems, stem_start, stem_start+stem_len) {
             if curr_layer == self.max_slayers-1 {
               for stem_to_leaf_bit in &mut self.stem_to_leaf[leaf_start/leaf_len..] {
-                *stem_to_leaf_bit -= stem_len; //TODO: check
+                *stem_to_leaf_bit -= stem_len;
               }
             }
             for layer_start in &mut self.slayer_starts[curr_layer+1..] {
-              // NOTE: this was 1 but it looks like that was an uncaught error, changed to stem__len
+              // NOTE: this was 1 but it looks like that was an uncaught error, changed to stem_len
               //       if any errors, look here.
               *layer_start -= stem_len; //Adjust lower layer start positions to reflect removal of stem
             }
@@ -612,7 +612,8 @@ impl K2Tree {
   /// fn main() -> Result<(), k2_tree::error::K2TreeError> {
   ///   use k2_tree::K2Tree;
   ///   let mut tree = K2Tree::with_k(2, 2)?;
-  ///   assert_eq!(2, tree.stem_k); //TODO
+  ///   assert_eq!(2, tree.stem_k);
+  ///   assert_eq!(2, tree.leaf_k);
   ///   assert_eq!(8, tree.matrix_width);
   ///   tree.grow();
   ///   assert_eq!(16, tree.matrix_width);
@@ -883,9 +884,17 @@ struct DescendEnv {
   slayer_max: usize,
 }
 impl K2Tree {
-  fn layer_from_range(&self, r: Range2D) -> usize { //TODO: Check stem_k cool
-    ((self.matrix_width as f64).log(self.stem_k as f64) as usize)
-    - ((r.width() as f64).log(self.stem_k as f64) as usize)
+  fn layer_from_range(&self, r: Range2D) -> usize {
+    (self.max_slayers+1) -
+    (
+      ((r.width()/self.leaf_k) as f64).log(self.stem_k as f64) as usize
+      +1
+    )
+    /*
+    Save for now, just in-case my maths for the multiple-ks is wrong
+      ((self.matrix_width as f64).log(self.k as f64) as usize)
+      - ((r.width() as f64).log(self.k as f64) as usize)
+    */
   }
   fn matrix_bit(&self, x: usize, y: usize, m_width: usize) -> Result<DescendResult> {
     let env = DescendEnv {
