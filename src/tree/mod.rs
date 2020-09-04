@@ -53,7 +53,7 @@ impl K2Tree {
   fn leaf_parent(&self, bit_pos: usize) -> usize {
     self.layer_start(self.max_slayers-1) + self.stem_to_leaf[bit_pos / self.leaf_len()]
   }
-  fn parent(&self, stem_start: usize) -> std::result::Result<[usize; 2], ()> { //TODO: test
+  fn parent(&self, stem_start: usize) -> std::result::Result<[usize; 2], ()> {
     /* Returns [stem_start, bit_offset] */
     if stem_start < self.slayer_starts[1] {
       return Err(())

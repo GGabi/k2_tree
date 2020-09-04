@@ -1796,7 +1796,7 @@ mod misc {
 mod many_k {
   use super::*;
   #[test]
-  fn build_0() -> Result<()> {
+  fn build() -> Result<()> {
     for i in 2..=3 {
       for stem_k in 2..9 {
         for leaf_k in 2..9 {
