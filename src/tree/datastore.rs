@@ -1187,6 +1187,61 @@ mod api {
     assert_eq!(tree, expected);
   }
   #[test]
+  fn set_leaf_k_0() {
+    let mut tree = K2Tree::new();
+    for valid_k in 2..7 {
+      assert!(tree.set_leaf_k(valid_k).is_ok());
+    }
+    for invalid_k in 0..2 {
+      assert!(tree.set_leaf_k(invalid_k).is_err());
+    }
+  }
+  #[test]
+  fn set_leaf_k_1() {
+    let mut tree = K2Tree::test_tree(2);
+    assert!(tree.set_leaf_k(3).is_ok());
+    let expected = K2Tree {
+      matrix_width: 12,
+      stem_k: 2,
+      leaf_k: 3,
+      max_slayers: 2,
+      slayer_starts: vec![0, 4],
+      stems: bitvec![
+        1,1,0,0, 0,1,1,1, 1,0,0,0,
+      ],
+      stem_to_leaf: vec![1,2,3,4],
+      leaves: bitvec![
+        0,0,1,0,1,0,0,0,0, 0,0,0,1,0,0,0,0,0,
+        0,0,0,0,0,1,0,1,0, 0,1,0,0,1,0,1,1,0
+      ],
+    };
+    assert_eq!(tree, expected);
+  }
+  #[test]
+  fn set_leaf_k_2() {
+    let mut tree = K2Tree::test_tree(3);
+    assert!(tree.set_leaf_k(2).is_ok());
+    let expected = K2Tree {
+      matrix_width: 54,
+      stem_k: 3,
+      leaf_k: 2,
+      max_slayers: 3,
+      slayer_starts: vec![0, 9, 27],
+      stems: bitvec![
+        1,0,0,1,0,0,0,0,0, 0,1,1,1,1,0,0,0,0, 1,1,0,0,0,0,0,0,0, //final layer starts below
+        0,1,1,0,0,1,0,0,0, 1,0,0,1,0,0,0,0,0, 0,0,0,1,0,0,0,0,0,
+        0,0,0,0,0,1,0,1,0, 1,0,0,0,0,0,0,0,0, 0,1,1,0,0,0,0,0,0
+      ],
+      stem_to_leaf: vec![1,2,5,9,12,21,32,34,36,45,46],
+      leaves: bitvec![
+        0,0,0,1, 1,0,0,0, 0,1,0,0, 1,0,1,0, 1,0,0,0,
+        0,0,1,0, 0,0,1,0, 0,1,0,0, 1,0,0,0, 0,0,0,1,
+        1,0,0,0
+      ],
+    };
+    assert_eq!(tree, expected);
+  }
+  #[test]
   fn is_empty_0() -> Result<()> {
     for stem_k in 2..10 {
       for leaf_k in 2..10 {

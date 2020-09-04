@@ -43,7 +43,8 @@ Another example is representing Triple-Stores, which [this repo](https://github.
 ```rust
 K2Tree {
   matrix_width: 8,
-  k: 2,
+  stem_k: 2,
+  leaf_k: 2,
   max_slayers: 2,
   slayer_starts: [0, 4],
   stems: [0111110111000100],
@@ -54,7 +55,7 @@ K2Tree {
 For a more in-depth explenation of the explanation process, [check this out](HOWITWORKS.md).
 # The Road to 1.0:
 - [x] Make `K2Tree` work over any value of K.
-- [ ]  Separate the `k` field into two distinct fields: `stem_k`, `leaf_k`.
+- [x]  Separate the `k` field into two distinct fields: `stem_k`, `leaf_k`.
 - [ ]  Attempt to increase compression ratio by removing the `stem_to_leaf` field without compromising operation complexity.
 - [ ] Unit test all the things.
 - [ ] Stabilise the API.
