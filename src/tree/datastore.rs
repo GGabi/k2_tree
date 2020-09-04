@@ -539,10 +539,9 @@ impl K2Tree {
               AND update offsets greater than the block_start of the new stem.
           */
           let block_start = (layer_bit_pos / stem_len) * stem_len;
-          self.stem_to_leaf = self.stem_to_leaf.iter().map(
-            |&n|
-              if n >= block_start { n + stem_len }
-              else { n }
+          self.stem_to_leaf = self.stem_to_leaf.iter().map(|&n|
+            if n >= block_start { n + stem_len }
+            else { n }
           ).collect();
         }
         let mut stem_to_leaf_pos: usize = 0;
@@ -745,9 +744,10 @@ impl K2Tree {
   /// ```
   pub fn into_matrix(self) -> Result<BitMatrix> {
     let mut m = BitMatrix::with_dimensions(self.matrix_width, self.matrix_width);
-    for y in 0..self.matrix_width {
-      for x in 0..self.matrix_width {
-        if let Err(e) = m.set(x, y, self.get(x, y)?) {
+    for (pos, &state) in self.leaves.iter().enumerate() {
+      if state {
+        let [x, y] = self.get_coords(pos);
+        if let Err(e) = m.set(x, y, true) {
           return Err(Error::BitMatrixError {
             source: Box::new(e),
           })
@@ -774,11 +774,12 @@ impl K2Tree {
   ///   Ok(())
   /// }
   /// ```
-  pub fn to_matrix(&self) -> Result<BitMatrix> { //TODO: too expensive, try use get_coords
+  pub fn to_matrix(&self) -> Result<BitMatrix> {
     let mut m = BitMatrix::with_dimensions(self.matrix_width, self.matrix_width);
-    for y in 0..self.matrix_width {
-      for x in 0..self.matrix_width {
-        if let Err(e) = m.set(x, y, self.get(x, y)?) {
+    for (pos, &state) in self.leaves.iter().enumerate() {
+      if state {
+        let [x, y] = self.get_coords(pos);
+        if let Err(e) = m.set(x, y, true) {
           return Err(Error::BitMatrixError {
             source: Box::new(e),
           })
