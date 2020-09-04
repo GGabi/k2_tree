@@ -49,7 +49,7 @@ pub struct Stems<'a> {
 impl<'a> Iterator for Stems<'a> {
   type Item = StemBit;
   fn next(&mut self) -> Option<Self::Item> {
-    let block_len = self.tree.block_len();
+    let stem_len = self.tree.stem_len();
     if self.pos >= self.tree.stems.len() {
       return None
     }
@@ -62,9 +62,9 @@ impl<'a> Iterator for Stems<'a> {
     });
     /* Increment the iterator's state for next value */
     self.pos += 1;
-    if self.bit == block_len-1 {
+    if self.bit == stem_len-1 {
       self.bit = 0;
-      if self.stem == (self.tree.layer_len(self.layer) / block_len) - 1 {
+      if self.stem == (self.tree.layer_len(self.layer) / stem_len) - 1 {
         self.stem = 0;
         self.layer += 1;
       }
@@ -103,7 +103,7 @@ pub struct IntoStems {
 impl Iterator for IntoStems {
   type Item = StemBit;
   fn next(&mut self) -> Option<Self::Item> {
-    let block_len = self.tree.block_len();
+    let stem_len = self.tree.stem_len();
     if self.pos >= self.tree.stems.len() {
       return None
     }
@@ -116,9 +116,9 @@ impl Iterator for IntoStems {
     });
     /* Increment the iterator's state for next value */
     self.pos += 1;
-    if self.bit == block_len-1 {
+    if self.bit == stem_len-1 {
       self.bit = 0;
-      if self.stem == (self.tree.layer_len(self.layer) / block_len) - 1 {
+      if self.stem == (self.tree.layer_len(self.layer) / stem_len) - 1 {
         self.stem = 0;
         self.layer += 1;
       }
@@ -157,8 +157,8 @@ impl<'a> Iterator for Leaves<'a> {
     if self.pos == self.tree.leaves.len() { return None }
     let [x, y] = self.tree.get_coords(self.pos);
     let value = self.tree.leaves[self.pos];
-    let leaf = self.pos / self.tree.block_len();
-    let bit = self.pos % self.tree.block_len();
+    let leaf = self.pos / self.tree.leaf_len();
+    let bit = self.pos % self.tree.leaf_len();
     self.pos += 1;
     Some(LeafBit {
       value,
@@ -189,10 +189,11 @@ impl Iterator for IntoLeaves {
   type Item = LeafBit;
   fn next(&mut self) -> Option<Self::Item> {
     if self.pos == self.tree.leaves.len() { return None }
+    let leaf_len = self.tree.leaf_len();
     let [x, y] = self.tree.get_coords(self.pos);
     let value = self.tree.leaves[self.pos];
-    let leaf = self.pos / self.tree.block_len();
-    let bit = self.pos % self.tree.block_len();
+    let leaf = self.pos / leaf_len;
+    let bit = self.pos % leaf_len;
     self.pos += 1;
     Some(LeafBit {
       value,

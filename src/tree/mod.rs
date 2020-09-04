@@ -24,16 +24,15 @@ impl K2Tree {
     }
     self.slayer_starts[l+1] - self.slayer_starts[l]
   }
-  fn get_coords(&self, leaf_bit_pos: usize) -> [usize; 2] { //TODO: Verify
+  fn get_coords(&self, leaf_bit_pos: usize) -> [usize; 2] {
     /* Start at the leaf_bit and traverse our way up to the top of the tree,
     keeping track of the path we took on our way up in terms of
     bit-positions (offsets) in the stems. Then, traverse back down the same
     path to find the coords of the leaf_bit. */
     let parent_bit = self.leaf_parent(leaf_bit_pos);
-    let mut stem_start = self.block_start(parent_bit);
+    let mut stem_start = self.stem_start(parent_bit);
     let mut offset = parent_bit - stem_start;
-    let mut offsets = Vec::new();
-    offsets.push(offset);
+    let mut offsets = vec![offset];
     for _ in 1..self.max_slayers {
       let parent = self.parent(stem_start).unwrap();
       stem_start = parent[0];
@@ -43,49 +42,40 @@ impl K2Tree {
     /* Reverse the offsets ready to traverse them back down the tree */
     offsets.reverse();
     let mut range = Range2D::new(0, self.matrix_width-1, 0, self.matrix_width-1);
-    // let mut range = [[0, self.matrix_width-1], [0, self.matrix_width-1]];
     for child_offset in offsets.into_iter().take(self.max_slayers) {
       range = self.to_subranges(range).unwrap()[child_offset];
-      // range = to_4_subranges(range)[child_offset];
     }
-    let leaf_offset = leaf_bit_pos - self.block_start(leaf_bit_pos);
-    let x = leaf_offset % self.k;
-    let y = leaf_offset / self.k;
-    [range.min_x + x, range.min_y + y] //TODO: Verify
-    // match leaf_offset {
-    //   0 => [range[0][0], range[1][0]],
-    //   1 => [range[0][1], range[1][0]],
-    //   2 => [range[0][0], range[1][1]],
-    //   3 => [range[0][1], range[1][1]],
-    //   _ => unreachable!(),
-    // }
+    let leaf_offset = leaf_bit_pos - self.leaf_start(leaf_bit_pos);
+    let x = leaf_offset % self.leaf_k;
+    let y = leaf_offset / self.leaf_k;
+    [range.min_x + x, range.min_y + y]
   }
   fn leaf_parent(&self, bit_pos: usize) -> usize {
-    self.layer_start(self.max_slayers-1) + self.stem_to_leaf[bit_pos / self.block_len()]
+    self.layer_start(self.max_slayers-1) + self.stem_to_leaf[bit_pos / self.leaf_len()]
   }
-  fn parent(&self, stem_start: usize) -> std::result::Result<[usize; 2], ()> { //TODO
-    /* Returns (stem_start, bit_offset) */
+  fn parent(&self, stem_start: usize) -> std::result::Result<[usize; 2], ()> {
+    /* Returns [stem_start, bit_offset] */
     if stem_start < self.slayer_starts[1] {
       return Err(())
     }
-    let block_len = self.block_len();
+    let stem_len = self.stem_len();
     /* Find which layer stem_start is in */
     let stem_layer = {
       let mut layer = self.max_slayers-1; //If no match, must be in highest layer
       for (i, &layer_start) in self.slayer_starts.iter().enumerate() {
-        if stem_start <= layer_start { layer = i; break }
+        if stem_start < layer_start { layer = i-1; break }
       }
       layer
     };
     /* Find the nth stem it is in the layer */
-    let stem_num = (stem_start - stem_layer) / block_len;
+    let stem_num = (stem_start - self.slayer_starts[stem_layer]) / stem_len;
     /* Find the nth 1 in the parent layer */
     let parent_bit = one_positions_range(
       &self.stems,
       self.slayer_starts[stem_layer-1],
       self.slayer_starts[stem_layer]
     )[stem_num];
-    Ok([self.block_start(parent_bit), parent_bit % block_len])
+    Ok([self.stem_start(parent_bit), parent_bit % stem_len])
   }
   fn layer_start(&self, l: usize) -> usize {
     if l == self.slayer_starts.len() {
@@ -99,14 +89,20 @@ impl K2Tree {
 
 /* Block Utils */
 impl K2Tree {
-  fn block_len(&self) -> usize {
-    self.k.pow(2)
+  fn stem_len(&self) -> usize {
+    self.stem_k.pow(2)
   }
-  fn block_start(&self, bit_pos: usize) -> usize {
-    (bit_pos / self.block_len()) * self.block_len()
+  fn leaf_len(&self) -> usize {
+    self.leaf_k.pow(2)
+  }
+  fn stem_start(&self, bit_pos: usize) -> usize {
+    (bit_pos / self.stem_len()) * self.stem_len()
+  }
+  fn leaf_start(&self, bit_pos: usize) -> usize {
+    (bit_pos / self.leaf_len()) * self.leaf_len()
   }
   fn to_subranges(&self, r: Range2D) -> std::result::Result<SubRanges, crate::error::SubRangesError> {
-    SubRanges::from_range(r, self.k, self.k)
+    SubRanges::from_range(r, self.stem_k, self.stem_k)
   }
 }
 
