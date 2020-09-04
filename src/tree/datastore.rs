@@ -774,7 +774,7 @@ impl K2Tree {
   ///   Ok(())
   /// }
   /// ```
-  pub fn to_matrix(&self) -> Result<BitMatrix> { //TODO: too expensive
+  pub fn to_matrix(&self) -> Result<BitMatrix> { //TODO: too expensive, try use get_coords
     let mut m = BitMatrix::with_dimensions(self.matrix_width, self.matrix_width);
     for y in 0..self.matrix_width {
       for x in 0..self.matrix_width {
