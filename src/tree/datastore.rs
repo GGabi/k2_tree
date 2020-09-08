@@ -1033,8 +1033,8 @@ impl K2Tree {
   fn footprint(&self) -> usize {
     let mut size: usize = std::mem::size_of_val(self);
     size += std::mem::size_of::<usize>() * self.slayer_starts.len();
-    size += self.stems.len() / 8;
-    size += self.leaves.len() / 8;
+    size += self.stems.len() / std::mem::size_of::<u8>();
+    size += self.leaves.len() / std::mem::size_of::<u8>();
     size
   }
   #[allow(dead_code)]
@@ -1759,6 +1759,31 @@ mod many_k {
         }
       }
     }
+    Ok(())
+  }
+}
+
+#[cfg(test)]
+mod size_bench {
+  use super::*;
+  #[test]
+  fn matrix_vs_tree() -> Result<()> {
+    let matrices = [
+      K2Tree::test_matrix(2),
+      K2Tree::test_matrix(3),
+    ];
+    let trees = [
+      K2Tree::test_tree(2),
+      K2Tree::test_tree(3),
+      K2Tree::test_tree(4),
+    ];
+    let matrix_size = |m: &BitMatrix| {
+      return m.width * m.height / 8;
+    };
+    dbg!(&trees[1]);
+    dbg!(matrix_size(&matrices[0]), trees[0].footprint());
+    dbg!(matrix_size(&matrices[1]), trees[0].footprint());
+    dbg!(matrix_size(&trees[2].to_matrix()?), trees[2].footprint());
     Ok(())
   }
 }
