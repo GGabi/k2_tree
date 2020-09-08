@@ -47,7 +47,7 @@ K2Tree {
   leaf_k: 2,
   max_slayers: 2,
   slayer_starts: [0, 4],
-  stems: [0111110111000100],
+  stems: [0111 1101 1100 0100],
   stem_to_leaf: [0, 1, 3, 4, 5, 9],
   leaves: [100010110010101010001100],
 }
@@ -56,7 +56,7 @@ For a more in-depth explenation of the explanation process, [check this out](HOW
 # The Road to 1.0:
 - [x] Make `K2Tree` work over any value of K.
 - [x]  Separate the `k` field into two distinct fields: `stem_k`, `leaf_k`.
-- [ ]  Attempt to increase compression ratio by removing the `stem_to_leaf` field without compromising operation complexity.
+- [x]  Attempt to increase compression ratio by removing the `stem_to_leaf` field without compromising operation complexity.
 - [ ] Unit test all the things.
 - [ ] Stabilise the API.
 

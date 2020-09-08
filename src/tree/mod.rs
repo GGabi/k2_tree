@@ -51,7 +51,13 @@ impl K2Tree {
     [range.min_x + x, range.min_y + y]
   }
   fn leaf_parent(&self, bit_pos: usize) -> usize {
-    self.layer_start(self.max_slayers-1) + self.stem_to_leaf[bit_pos / self.leaf_len()]
+    let nth_leaf = bit_pos / self.leaf_len();
+    let stem_ones_positions = one_positions_range(
+      &self.stems,
+      self.layer_start(self.max_slayers-1),
+      self.stems.len()
+    );
+    self.layer_start(self.max_slayers-1) + stem_ones_positions[nth_leaf] //TODO: check
   }
   fn parent(&self, stem_start: usize) -> std::result::Result<[usize; 2], ()> {
     /* Returns [stem_start, bit_offset] */

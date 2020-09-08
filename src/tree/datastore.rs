@@ -46,13 +46,6 @@ pub struct K2Tree {
   pub slayer_starts: Vec<usize>,
   /// The bits that comprise the stems of the tree. 
   pub stems: BitVec,
-  /// Layer that links the positive bits in the final stem-layer.
-  /// 
-  /// The value of each element is the offset of a positive stem-bit
-  /// relative to the the start of the final stem-layer. The index
-  /// of each element corresponds to the position of the leaf-block
-  /// it links to.
-  pub stem_to_leaf: Vec<usize>, //TODO: find a way to remove this field without significantly increasing complexity
   /// The bits that comprise the leaves of the tree.
   pub leaves: BitVec,
 }
@@ -76,7 +69,6 @@ impl K2Tree {
       max_slayers: 2,
       slayer_starts: vec![0],
       stems: bitvec![0; 4],
-      stem_to_leaf: Vec::new(),
       leaves: BitVec::new(),
     }
   }
@@ -111,7 +103,6 @@ impl K2Tree {
       max_slayers: 2,
       slayer_starts: vec![0],
       stems: bitvec![0; stem_k*stem_k],
-      stem_to_leaf: Vec::new(),
       leaves: BitVec::new(),
     })
   }
@@ -357,8 +348,7 @@ impl K2Tree {
         Loop up the stems changing the parent bits to 0's and removing stems that become all 0's */
         if !state && all_zeroes(&self.leaves, leaf_start, leaf_start+leaf_len) {
           /* - Remove the leaf
-              - Use stem_to_leaf to find the dead leaf's parent bit
-              - Remove the elem from stem_to_leaf that mapped to dead leaf
+              - Use find the dead leaf's parent bit
               - Set parent bit to 0, check if stem now all 0's
               - If all 0's:
               - - Remove stem
@@ -375,26 +365,19 @@ impl K2Tree {
               })
             })
           }
-          let stem_bit_pos = self.stem_to_leaf[leaf_start/leaf_len];
-          self.stem_to_leaf.remove(leaf_start/leaf_len);
-          if self.stem_to_leaf.is_empty() {
+          let stem_bit_pos = self.leaf_parent(leaf_start); //TODO: check
+          if self.leaves.is_empty() {
             /* If no more leaves, then remove all stems immediately
             and don't bother with complex stuff below */
             self.stems = bitvec![0; stem_len];
             self.slayer_starts = vec![0];
             return Ok(())
           }
-          let layer_start = self.slayer_starts[self.max_slayers-1];
-          self.stems.set(layer_start + stem_bit_pos, false); //Dead leaf parent bit = 0
+          self.stems.set(stem_bit_pos, false); //Dead leaf parent bit = 0, TODO: check
           let mut curr_layer = self.max_slayers-1;
-          let mut stem_start = layer_start + self.stem_start(stem_bit_pos);
+          let mut stem_start = self.stem_start(stem_bit_pos); //TODO: check
           while curr_layer > 0
           && all_zeroes(&self.stems, stem_start, stem_start+stem_len) {
-            if curr_layer == self.max_slayers-1 {
-              for stem_to_leaf_bit in &mut self.stem_to_leaf[leaf_start/leaf_len..] {
-                *stem_to_leaf_bit -= stem_len;
-              }
-            }
             for layer_start in &mut self.slayer_starts[curr_layer+1..] {
               // NOTE: this was 1 but it looks like that was an uncaught error, changed to stem_len
               //       if any errors, look here.
@@ -428,12 +411,9 @@ impl K2Tree {
         let mut layer_starts_len = self.slayer_starts.len();
         let mut layer = self.layer_from_range(stem_range);
         let mut subranges: SubRanges;
-        /* Keep track of whether lowest stem is freshly created (all 0000s) */
-        let mut fresh_stem = false;
         /* Create correct stems in layers on the way down to the final layer,
         which points to the leaves */
         while layer < self.max_slayers-1 {
-          fresh_stem = true;
           subranges = match self.to_subranges(stem_range) {
             Ok(subranges) => subranges,
             Err(error) => return Err(Error::CorruptedK2Tree {
@@ -521,37 +501,14 @@ impl K2Tree {
         };
         /* Set the correct stem bit to 1 */
         self.stems.set(stem_start + child_pos, true);
-        /* Get the bit position within the final stem layer,
-        find the position in stem_to_leaf to insert the linking elem,
-        insert linking elem */
-        let layer_bit_pos = (stem_start + child_pos) - self.slayer_starts[layer_starts_len-1];
-        /* If stem is fresh, increase bit positions in stem_to_leaf
-        after the new elem by 4 to account for the new stem before them */
-        if fresh_stem {
-          /* Warning:
-            Before inserting this block, a subtle and infrequent problem was occuring:
-              If final stem layer == [0010] then stem_to_leaf == [2]
-              If a fresh stem inserted making it [0001 0010] then:
-                New offset inserted to stem_to_leaf was 3, which was greater than 2.
-                The code thought that the bit corresponding to the 2 was before the
-                new stem, so wouldn't update offset correctly.
-              Now we update stem_to_leaf offsets BEFORE inserting new value
-              AND update offsets greater than the block_start of the new stem.
-          */
-          let block_start = (layer_bit_pos / stem_len) * stem_len;
-          self.stem_to_leaf = self.stem_to_leaf.iter().map(|&n|
-            if n >= block_start { n + stem_len }
-            else { n }
-          ).collect();
-        }
-        let mut stem_to_leaf_pos: usize = 0;
-        while stem_to_leaf_pos < self.stem_to_leaf.len()
-        && self.stem_to_leaf[stem_to_leaf_pos] < layer_bit_pos {
-          stem_to_leaf_pos += 1;
-        }
-        self.stem_to_leaf.insert(stem_to_leaf_pos, layer_bit_pos);
+        /* Find the index to insert the new leaf */
+        let nth_leaf = ones_in_range(
+          &self.stems,
+          self.layer_start(self.max_slayers-1),
+          stem_start + child_pos
+        );
+        let leaf_start = nth_leaf * leaf_len; //TODO: Check
         /* Create new leaf of all 0's */
-        let leaf_start = stem_to_leaf_pos * leaf_len;
         if let Err(()) = insert_block(&mut self.leaves, leaf_start, leaf_len) {
           return Err(Error::CorruptedK2Tree {
             source: Box::new(Error::Write {
@@ -566,7 +523,6 @@ impl K2Tree {
         let leaf_range = subrange;
         let offset = (self.leaf_k * (y - leaf_range.min_y)) + (x - leaf_range.min_x);
         self.leaves.set(leaf_start+offset, true);
-        return Ok(())
       }
       _ => {},
     };
@@ -941,13 +897,15 @@ impl K2Tree {
     ones_in_range(&self.stems, self.layer_start(layer), bit_pos)
   }
   fn stem_to_leaf_start(&self, stem_bitpos: usize) -> std::result::Result<usize, ()> {
-    if !self.stems[stem_bitpos] { return Err(()) }
-    if let Some(leaf_num) = self.stem_to_leaf.iter().position(|&n|
-      n == (stem_bitpos - self.slayer_starts[self.max_slayers-1])
-    ) {
-      return Ok(leaf_num * self.leaf_len())
+    if !self.stems[stem_bitpos] { Err(()) }
+    else {
+      let nth_leaf = ones_in_range(
+        &self.stems,
+        self.slayer_starts[self.slayer_starts.len()-1],
+        stem_bitpos
+      );
+      Ok(nth_leaf * self.leaf_len())
     }
-    Err(())
   }
   fn child_stem(&self, layer: usize, stem_start: usize, nth_child: usize) -> std::result::Result<usize, ()> {
     if !self.stems[stem_start+nth_child]
@@ -972,7 +930,6 @@ impl K2Tree {
         max_slayers: 2,
         slayer_starts: vec![0, 4],
         stems:  bitvec![0,1,1,1, 1,1,0,1, 1,0,0,0, 1,0,0,0],
-        stem_to_leaf: vec![0, 1, 3, 4, 8],
         leaves: bitvec![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0],
       },
       3 => K2Tree {
@@ -985,7 +942,6 @@ impl K2Tree {
           0,1,0,1,1,0,1,1,0, 1,1,0,0,0,0,0,0,0, 1,0,0,0,0,0,0,0,0,
           1,0,0,0,0,0,0,0,0, 1,0,0,0,0,0,0,0,0, 1,0,0,0,0,0,0,0,0
         ],
-        stem_to_leaf: vec![0, 1, 9, 18, 27, 36],
         leaves: bitvec![
           0,1,0,1,0,0,0,0,1, 1,0,0,1,0,0,1,0,0, 1,0,0,0,0,0,0,0,0,
           0,1,0,1,0,0,0,0,0, 1,0,0,0,0,0,0,0,0, 0,1,0,1,0,0,0,0,0,
@@ -1003,7 +959,6 @@ impl K2Tree {
           0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,
           1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
         ],
-        stem_to_leaf: vec![0, 8, 22, 46, 47, 61, 77, 78, 79, 80, 82, 99],
         leaves: bitvec![
           1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,
           0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0, 0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -1079,7 +1034,6 @@ impl K2Tree {
     let mut size: usize = std::mem::size_of_val(self);
     size += std::mem::size_of::<usize>() * self.slayer_starts.len();
     size += self.stems.len() / 8;
-    size += std::mem::size_of::<usize>() * self.stem_to_leaf.len();
     size += self.leaves.len() / 8;
     size
   }
@@ -1103,7 +1057,6 @@ mod api {
       max_slayers: 2,
       slayer_starts: vec![0],
       stems: bitvec![0,0,0,0],
-      stem_to_leaf: vec![],
       leaves: bitvec![],
     };
     assert_eq!(K2Tree::new(), expected);
@@ -1124,7 +1077,6 @@ mod api {
           max_slayers: 2,
           slayer_starts: vec![0],
           stems: bitvec![0; stem_k.pow(2)],
-          stem_to_leaf: Vec::new(),
           leaves: BitVec::new(),
         };
         assert_eq!(K2Tree::with_k(stem_k, leaf_k)?, expected);
@@ -1156,7 +1108,6 @@ mod api {
         1,1,0,0,0,0,0,0,0, 0,0,1,0,0,0,1,0,1,
         1,0,0,1,0,0,0,0,0
       ],
-      stem_to_leaf: vec![2,6,8,9,12],
       leaves: bitvec![
         0,1,1,0, 1,0,0,0, 0,1,1,0,
         0,1,0,1, 1,1,0,0
@@ -1178,7 +1129,6 @@ mod api {
         1,0,0,0, 1,1,1,0, 0,1,1,1, 1,0,0,0, 0,0,1,1, //final layer begins here
         0,1,0,0, 0,0,1,0, 0,0,0,1, 1,0,0,0, 1,0,0,0, 0,1,0,0
       ],
-      stem_to_leaf: vec![1,6,11,12,16,21],
       leaves: bitvec![
         0,1,0,1,0,0,0,0,1, 1,0,0,0,0,0,0,0,0,
         0,1,0,1,0,0,0,0,0, 1,0,0,1,0,0,1,0,0,
@@ -1210,7 +1160,6 @@ mod api {
       stems: bitvec![
         1,1,0,0, 0,1,1,1, 1,0,0,0,
       ],
-      stem_to_leaf: vec![1,2,3,4],
       leaves: bitvec![
         0,0,1,0,1,0,0,0,0, 0,0,0,1,0,0,0,0,0,
         0,0,0,0,0,1,0,1,0, 0,1,0,0,1,0,1,1,0
@@ -1233,7 +1182,6 @@ mod api {
         0,1,1,0,0,1,0,0,0, 1,0,0,1,0,0,0,0,0, 0,0,0,1,0,0,0,0,0,
         0,0,0,0,0,1,0,1,0, 1,0,0,0,0,0,0,0,0, 0,1,1,0,0,0,0,0,0
       ],
-      stem_to_leaf: vec![1,2,5,9,12,21,32,34,36,45,46],
       leaves: bitvec![
         0,0,0,1, 1,0,0,0, 0,1,0,0, 1,0,1,0, 1,0,0,0,
         0,0,1,0, 0,0,1,0, 0,1,0,0, 1,0,0,0, 0,0,0,1,
