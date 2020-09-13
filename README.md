@@ -10,7 +10,7 @@ See the original proposal [here](https://users.dcc.uchile.cl/~gnavarro/ps/spire0
 Add  `k2_tree`  into your project dependencies:
 ```none
 [dependencies]
-k2_tree = "0.4.1"
+k2_tree = "0.4.2"
 ```
 # When `K2Tree`s are Useful:
 `K2Tree`s are extremely efficient at representing data that can be encoded as a two-dimensional bit-matrix, especially if said matrix is sparsely populated.
@@ -42,7 +42,6 @@ Another example is representing Triple-Stores, which [this repo](https://github.
 ## Final `K2Tree`:
 ```rust
 K2Tree {
-  matrix_width: 8,
   stem_k: 2,
   leaf_k: 2,
   max_slayers: 2,
