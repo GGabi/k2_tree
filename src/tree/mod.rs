@@ -41,7 +41,8 @@ impl K2Tree {
     }
     /* Reverse the offsets ready to traverse them back down the tree */
     offsets.reverse();
-    let mut range = Range2D::new(0, self.matrix_width-1, 0, self.matrix_width-1);
+    let range_max = self.matrix_width()-1;
+    let mut range = Range2D::new(0, range_max, 0, range_max);
     for child_offset in offsets.into_iter().take(self.max_slayers) {
       range = self.to_subranges(range).unwrap()[child_offset];
     }
