@@ -47,7 +47,7 @@ K2Tree {
   leaf_k: 2,
   max_slayers: 2,
   slayer_starts: [0, 4],
-  stems: [0111 1101 1100 0100],
+  stems: [0111110111000100],
   leaves: [100010110010101010001100],
 }
 ```
