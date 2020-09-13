@@ -7,9 +7,6 @@ use {
 
 type Result<T> = std::result::Result<T, Error>;
 
-
-//matrix_width = self.leaf_k + (self.max_slayers * self.stem_k)
-
 /// A collection designed to efficiently compress sparsely-populated bit-matrices.
 ///
 /// The `K2Tree` represents a matrix of bits and behaves ***as if*** it is a bit-matrix.
@@ -34,14 +31,11 @@ type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, Clone)]
 pub struct K2Tree {
   /// The k value of the K2Tree's stems.
-  /// 
-  /// This determines the minimum width of the matrix it represents, the length of stems, 
-  /// the number
   pub stem_k: usize,
   /// The k value of the K2Tree's leaves.
   pub leaf_k: usize,
   /// The maximum number of stem-layers possible given the matrix_width.
-  pub max_slayers: usize,
+  pub max_slayers: usize, //Could I encode this in the length of slayer_starts? Without making code much slower?
   /// The index of the first bit in each stem-layer in stems.
   pub slayer_starts: Vec<usize>,
   /// The bits that comprise the stems of the tree. 
