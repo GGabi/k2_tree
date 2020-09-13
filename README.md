@@ -10,7 +10,7 @@ See the original proposal [here](https://users.dcc.uchile.cl/~gnavarro/ps/spire0
 Add  `k2_tree`  into your project dependencies:
 ```none
 [dependencies]
-k2_tree = "0.4.0"
+k2_tree = "0.4.1"
 ```
 # When `K2Tree`s are Useful:
 `K2Tree`s are extremely efficient at representing data that can be encoded as a two-dimensional bit-matrix, especially if said matrix is sparsely populated.
@@ -48,7 +48,6 @@ K2Tree {
   max_slayers: 2,
   slayer_starts: [0, 4],
   stems: [0111110111000100],
-  stem_to_leaf: [0, 1, 3, 4, 5, 9],
   leaves: [100010110010101010001100],
 }
 ```
@@ -56,7 +55,7 @@ For a more in-depth explenation of the explanation process, [check this out](HOW
 # The Road to 1.0:
 - [x] Make `K2Tree` work over any value of K.
 - [x]  Separate the `k` field into two distinct fields: `stem_k`, `leaf_k`.
-- [ ]  Attempt to increase compression ratio by removing the `stem_to_leaf` field without compromising operation complexity.
+- [x]  Increase compression ratio by removing the `stem_to_leaf` field without compromising operation complexity.
 - [ ] Unit test all the things.
 - [ ] Stabilise the API.
 
