@@ -14,12 +14,6 @@ pub use iterators::{
   LeavesRaw,
 };
 
-/*
-  Funcs which use slayer_starts:
-  - self.layer_len()
-  - self.parent()
-*/
-
 /* Common */
 use bitvec::vec::BitVec;
 
@@ -272,65 +266,65 @@ impl Range2D {
     && y >= self.min_y && y <= self.max_y
   }
 }
+impl PartialEq for Range2D {
+  fn eq(&self, other: &Self) -> bool {
+    self.min_x == other.min_x
+    && self.max_x == other.max_x
+    && self.min_y == other.min_y
+    && self.max_y == other.max_y
+  }
+}
+impl Eq for Range2D {}
 
 /* Tests */
-
-
-// #[cfg(test)]
-// mod range_tests {
-//   use super::*;
-//   #[test]
-//   fn range2d_from_range() {
-//     let range = [[0, 7], [0, 7]];
-//     let expected = Range2D {
-//       min_x: 0,
-//       max_x: 7,
-//       min_y: 0,
-//       max_y: 7,
-//     };
-//     assert_eq!(expected, Range2D::from_range(range));
-//   }
-//   #[test]
-//   fn subranges_from_range2d_0() {
-//     let original = Range2D::new(0, 7, 0, 7);
-//     let expected_subs = [
-//       Range2D::new(0, 3, 0, 3),
-//       Range2D::new(4, 7, 0, 3),
-//       Range2D::new(0, 3, 4, 7),
-//       Range2D::new(4, 7, 4, 7),
-//     ];
-//     let subs = SubRange::from_range(original, 2, 2);
-//     for i in 0..4 { assert_eq!(expected_subs[i], subs[i]); }
-//   }
-//   #[test]
-//   fn subranges_from_range2d_1() {
-//     let original = Range2D::new(0, 8, 0, 8);
-//     let expected_subs = [
-//       Range2D::new(0, 2, 0, 2),
-//       Range2D::new(3, 5, 0, 2),
-//       Range2D::new(6, 8, 0, 2),
-//       Range2D::new(0, 2, 3, 5),
-//       Range2D::new(3, 5, 3, 5),
-//       Range2D::new(6, 8, 3, 5),
-//       Range2D::new(0, 2, 6, 8),
-//       Range2D::new(3, 5, 6, 8),
-//       Range2D::new(6, 8, 6, 8),
-//     ];
-//     let subs = SubRange::from_range(original, 3, 3);
-//     for i in 0..9 { assert_eq!(expected_subs[i], subs[i]); }
-//   }
-//   #[test]
-//   fn subranges_from_range2d_2() {
-//     let original = Range2D::new(0, 8, 0, 7);
-//     let expected_subs = [
-//       Range2D::new(0, 2, 0, 3),
-//       Range2D::new(3, 5, 0, 3),
-//       Range2D::new(6, 8, 0, 3),
-//       Range2D::new(0, 2, 4, 7),
-//       Range2D::new(3, 5, 4, 7),
-//       Range2D::new(6, 8, 4, 7),
-//     ];
-//     let subs = SubRange::from_range(original, 3, 2);
-//     for i in 0..6 { assert_eq!(expected_subs[i], subs[i]); }
-//   }
-// }
+#[cfg(test)]
+mod range_tests {
+  use super::*;
+  type Result<T> = std::result::Result<T, crate::error::SubRangesError>;
+  #[test]
+  fn subranges_from_range2d_0() -> Result<()> {
+    let original = Range2D::new(0, 7, 0, 7);
+    let expected_subs = [
+      Range2D::new(0, 3, 0, 3),
+      Range2D::new(4, 7, 0, 3),
+      Range2D::new(0, 3, 4, 7),
+      Range2D::new(4, 7, 4, 7),
+    ];
+    let subs = SubRanges::from_range(original, 2, 2)?;
+    for i in 0..4 { assert_eq!(expected_subs[i], subs[i]); }
+    Ok(())
+  }
+  #[test]
+  fn subranges_from_range2d_1() -> Result<()> {
+    let original = Range2D::new(0, 8, 0, 8);
+    let expected_subs = [
+      Range2D::new(0, 2, 0, 2),
+      Range2D::new(3, 5, 0, 2),
+      Range2D::new(6, 8, 0, 2),
+      Range2D::new(0, 2, 3, 5),
+      Range2D::new(3, 5, 3, 5),
+      Range2D::new(6, 8, 3, 5),
+      Range2D::new(0, 2, 6, 8),
+      Range2D::new(3, 5, 6, 8),
+      Range2D::new(6, 8, 6, 8),
+    ];
+    let subs = SubRanges::from_range(original, 3, 3)?;
+    for i in 0..9 { assert_eq!(expected_subs[i], subs[i]); }
+    Ok(())
+  }
+  #[test]
+  fn subranges_from_range2d_2() -> Result<()> {
+    let original = Range2D::new(0, 8, 0, 7);
+    let expected_subs = [
+      Range2D::new(0, 2, 0, 3),
+      Range2D::new(3, 5, 0, 3),
+      Range2D::new(6, 8, 0, 3),
+      Range2D::new(0, 2, 4, 7),
+      Range2D::new(3, 5, 4, 7),
+      Range2D::new(6, 8, 4, 7),
+    ];
+    let subs = SubRanges::from_range(original, 3, 2)?;
+    for i in 0..6 { assert_eq!(expected_subs[i], subs[i]); }
+    Ok(())
+  }
+}
