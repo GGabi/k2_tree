@@ -803,12 +803,13 @@ impl core::fmt::Display for K2Tree {
     if self.leaves.len() == 0 { return write!(f, "[0000]") }
     let mut s = String::new();
     let mut i: usize = 1;
+    let layer_starts = self.layer_starts();
     for layer_num in 0..self.max_slayers {
-      for bit_pos in self.layer_start(layer_num)..self.layer_start(layer_num+1) {
+      for bit_pos in layer_starts[layer_num]..layer_starts[layer_num+1] {
         if self.stems[bit_pos] { s.push('1'); }
         else { s.push('0'); }
         if i == self.stem_k*self.stem_k
-        && (bit_pos - self.layer_start(layer_num)) < self.layer_len(layer_num)-1 {
+        && (bit_pos - layer_starts[layer_num]) < self.layer_len(layer_num)-1 {
           s.push_str(", ");
           i = 1;
         } 
@@ -1773,5 +1774,42 @@ mod many_k {
       }
     }
     Ok(())
+  }
+}
+
+#[cfg(test)]
+mod layer_tests {
+  use super::*;
+  #[test]
+  fn layer_start_0() {
+    let trees = [
+      K2Tree::test_tree(2),
+      K2Tree::test_tree(3),
+      K2Tree::test_tree(4)
+    ];
+    let expecteds = [
+      [0, 4],
+      [0, 9],
+      [0, 16]
+    ];
+    for k in 0..trees.len() {
+      for layer in 0..expecteds[k].len() {
+        assert_eq!(expecteds[k][layer], trees[k].layer_start(layer));
+      }
+    }
+  }
+  #[test]
+  fn layer_start_1() {
+    let mut tree = K2Tree::test_tree(3);
+    for _ in 0..9 { tree.grow(); }
+    tree.set(67, 78, true);
+    tree.set(100, 100, true);
+    tree.set(33, 146, true);
+    tree.set(43, 146, true);
+    dbg!(&tree);
+    let expected = [0, 9, 18, 27, 36, 45, 54, 63, 72, 99, 135];
+    for layer in 0..tree.max_slayers {
+      assert_eq!(expected[layer], tree.layer_start(layer));
+    }
   }
 }

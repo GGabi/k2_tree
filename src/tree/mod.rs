@@ -18,7 +18,6 @@ pub use iterators::{
   Funcs which use slayer_starts:
   - self.layer_len()
   - self.parent()
-  - self.layer_start()
 */
 
 /* Common */
@@ -60,12 +59,13 @@ impl K2Tree {
   }
   fn leaf_parent(&self, bit_pos: usize) -> usize {
     let nth_leaf = bit_pos / self.leaf_len();
+    let final_stem_layer_start = self.layer_start(self.max_slayers-1);
     let stem_ones_positions = one_positions_range(
       &self.stems,
-      self.layer_start(self.max_slayers-1),
+      final_stem_layer_start,
       self.stems.len()
     );
-    self.layer_start(self.max_slayers-1) + stem_ones_positions[nth_leaf] //TODO: check
+    final_stem_layer_start + stem_ones_positions[nth_leaf] //TODO: check
   }
   fn parent(&self, stem_start: usize) -> std::result::Result<[usize; 2], ()> {
     /* Returns [stem_start, bit_offset] */
@@ -92,12 +92,36 @@ impl K2Tree {
     Ok([self.stem_start(parent_bit), parent_bit % stem_len])
   }
   fn layer_start(&self, l: usize) -> usize {
-    if l == self.slayer_starts.len() {
-      self.stems.len()
+    //Private method, let it crash seeing as is just unwrapped otherwise
+    let mut curr_layer = 1;
+    let mut layer_starts = vec![0, self.stem_len()];
+    while curr_layer < l {
+      let stems_in_curr_layer = ones_in_range(
+        &self.stems,
+        layer_starts[curr_layer-1],
+        layer_starts[curr_layer]
+      );
+      let curr_layer_len = stems_in_curr_layer * self.stem_len();
+      layer_starts.push(layer_starts[curr_layer] + curr_layer_len);
+      curr_layer += 1;
     }
-    else {
-      self.slayer_starts[l]
+    layer_starts[l]
+  }
+  fn layer_starts(&self) -> Vec<usize> {
+    //Private method, let it crash seeing as is just unwrapped otherwise
+    let mut curr_layer = 1;
+    let mut layer_starts = vec![0, self.stem_len()];
+    while curr_layer < self.max_slayers {
+      let stems_in_curr_layer = ones_in_range(
+        &self.stems,
+        layer_starts[curr_layer-1],
+        layer_starts[curr_layer]
+      );
+      let curr_layer_len = stems_in_curr_layer * self.stem_len();
+      layer_starts.push(layer_starts[curr_layer] + curr_layer_len);
+      curr_layer += 1;
     }
+    layer_starts
   }
 }
 
@@ -248,61 +272,63 @@ impl Range2D {
 }
 
 /* Tests */
-#[cfg(tests)]
-mod range_tests {
-  use super::*;
-  #[test]
-  fn range2d_from_range() {
-    let range = [[0, 7], [0, 7]];
-    let expected = Range2D {
-      min_x: 0,
-      max_x: 7,
-      min_y: 0,
-      max_y: 7,
-    };
-    assert_eq!(expected, Range2D::from_range(range));
-  }
-  #[test]
-  fn subranges_from_range2d_0() {
-    let original = Range2D::new(0, 7, 0, 7);
-    let expected_subs = [
-      Range2D::new(0, 3, 0, 3),
-      Range2D::new(4, 7, 0, 3),
-      Range2D::new(0, 3, 4, 7),
-      Range2D::new(4, 7, 4, 7),
-    ];
-    let subs = SubRange::from_range(original, 2, 2);
-    for i in 0..4 { assert_eq!(expected_subs[i], subs[i]); }
-  }
-  #[test]
-  fn subranges_from_range2d_1() {
-    let original = Range2D::new(0, 8, 0, 8);
-    let expected_subs = [
-      Range2D::new(0, 2, 0, 2),
-      Range2D::new(3, 5, 0, 2),
-      Range2D::new(6, 8, 0, 2),
-      Range2D::new(0, 2, 3, 5),
-      Range2D::new(3, 5, 3, 5),
-      Range2D::new(6, 8, 3, 5),
-      Range2D::new(0, 2, 6, 8),
-      Range2D::new(3, 5, 6, 8),
-      Range2D::new(6, 8, 6, 8),
-    ];
-    let subs = SubRange::from_range(original, 3, 3);
-    for i in 0..9 { assert_eq!(expected_subs[i], subs[i]); }
-  }
-  #[test]
-  fn subranges_from_range2d_2() {
-    let original = Range2D::new(0, 8, 0, 7);
-    let expected_subs = [
-      Range2D::new(0, 2, 0, 3),
-      Range2D::new(3, 5, 0, 3),
-      Range2D::new(6, 8, 0, 3),
-      Range2D::new(0, 2, 4, 7),
-      Range2D::new(3, 5, 4, 7),
-      Range2D::new(6, 8, 4, 7),
-    ];
-    let subs = SubRange::from_range(original, 3, 2);
-    for i in 0..6 { assert_eq!(expected_subs[i], subs[i]); }
-  }
-}
+
+
+// #[cfg(test)]
+// mod range_tests {
+//   use super::*;
+//   #[test]
+//   fn range2d_from_range() {
+//     let range = [[0, 7], [0, 7]];
+//     let expected = Range2D {
+//       min_x: 0,
+//       max_x: 7,
+//       min_y: 0,
+//       max_y: 7,
+//     };
+//     assert_eq!(expected, Range2D::from_range(range));
+//   }
+//   #[test]
+//   fn subranges_from_range2d_0() {
+//     let original = Range2D::new(0, 7, 0, 7);
+//     let expected_subs = [
+//       Range2D::new(0, 3, 0, 3),
+//       Range2D::new(4, 7, 0, 3),
+//       Range2D::new(0, 3, 4, 7),
+//       Range2D::new(4, 7, 4, 7),
+//     ];
+//     let subs = SubRange::from_range(original, 2, 2);
+//     for i in 0..4 { assert_eq!(expected_subs[i], subs[i]); }
+//   }
+//   #[test]
+//   fn subranges_from_range2d_1() {
+//     let original = Range2D::new(0, 8, 0, 8);
+//     let expected_subs = [
+//       Range2D::new(0, 2, 0, 2),
+//       Range2D::new(3, 5, 0, 2),
+//       Range2D::new(6, 8, 0, 2),
+//       Range2D::new(0, 2, 3, 5),
+//       Range2D::new(3, 5, 3, 5),
+//       Range2D::new(6, 8, 3, 5),
+//       Range2D::new(0, 2, 6, 8),
+//       Range2D::new(3, 5, 6, 8),
+//       Range2D::new(6, 8, 6, 8),
+//     ];
+//     let subs = SubRange::from_range(original, 3, 3);
+//     for i in 0..9 { assert_eq!(expected_subs[i], subs[i]); }
+//   }
+//   #[test]
+//   fn subranges_from_range2d_2() {
+//     let original = Range2D::new(0, 8, 0, 7);
+//     let expected_subs = [
+//       Range2D::new(0, 2, 0, 3),
+//       Range2D::new(3, 5, 0, 3),
+//       Range2D::new(6, 8, 0, 3),
+//       Range2D::new(0, 2, 4, 7),
+//       Range2D::new(3, 5, 4, 7),
+//       Range2D::new(6, 8, 4, 7),
+//     ];
+//     let subs = SubRange::from_range(original, 3, 2);
+//     for i in 0..6 { assert_eq!(expected_subs[i], subs[i]); }
+//   }
+// }
