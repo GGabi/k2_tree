@@ -68,12 +68,10 @@ The above `K2Tree` is stored as a series of bits:
 Finally, the bit representation of the K2Tree is stored alongside various metadata; so that the original matrix can be recovered and to greatly optimise various operations.
 ```rust
 K2Tree {
-  matrix_width: 8,
-  k: 2,
+  stem_k: 2,
+  leaf_k: 2,
   max_slayers: 2,
-  slayer_starts: [0, 4],
   stems: [0111110111000100],
-  stem_to_leaf: [0, 1, 3, 4, 5, 9],
   leaves: [100010110010101010001100],
 }
 ```
