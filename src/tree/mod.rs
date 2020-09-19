@@ -14,6 +14,13 @@ pub use iterators::{
   LeavesRaw,
 };
 
+/*
+  Funcs which use slayer_starts:
+  - self.layer_len()
+  - self.parent()
+  - self.layer_start()
+*/
+
 /* Common */
 use bitvec::vec::BitVec;
 

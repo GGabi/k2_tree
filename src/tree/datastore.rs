@@ -7,6 +7,18 @@ use {
 
 type Result<T> = std::result::Result<T, Error>;
 
+/*
+  Funcs which use slayer_starts:
+  - set()
+  - grow()
+  - shrink()
+  - Trait Display
+  - stem_to_leaf_start()
+
+  Instances used in hot code:
+  - None?
+*/
+
 /// A collection designed to efficiently compress sparsely-populated bit-matrices.
 ///
 /// The `K2Tree` represents a matrix of bits and behaves ***as if*** it is a bit-matrix.
@@ -137,7 +149,7 @@ impl K2Tree {
     *self = K2Tree::from_matrix(self.to_matrix()?, self.stem_k, leaf_k)?;
     Ok(())
   }
-  ///Returns true if a `K2Tree` contains no 1s
+  ///Returns true if a `K2Tree` contains no 1s.
   pub fn is_empty(&self) -> bool {
     ones_in_range(&self.leaves, 0, self.leaves.len()) == 0
   }
@@ -368,9 +380,9 @@ impl K2Tree {
             self.slayer_starts = vec![0];
             return Ok(())
           }
-          self.stems.set(stem_bit_pos, false); //Dead leaf parent bit = 0, TODO: check
+          self.stems.set(stem_bit_pos, false); //Dead leaf parent bit = 0
           let mut curr_layer = self.max_slayers-1;
-          let mut stem_start = self.stem_start(stem_bit_pos); //TODO: check
+          let mut stem_start = self.stem_start(stem_bit_pos);
           while curr_layer > 0
           && all_zeroes(&self.stems, stem_start, stem_start+stem_len) {
             for layer_start in &mut self.slayer_starts[curr_layer+1..] {
@@ -403,7 +415,8 @@ impl K2Tree {
           - Construct needed stems until reach final layer
           - Construct leaf corresponding to range containing (x, y)
           - Set bit at (x, y) to 1 */
-        let mut layer_starts_len = self.slayer_starts.len();
+        //Either 0 or == max_slayers?
+        let mut layer_starts_len = self.slayer_starts.len(); //cannot replace with max_slayers bc might not be max?
         let mut layer = self.layer_from_range(stem_range);
         let mut subranges: SubRanges;
         /* Create correct stems in layers on the way down to the final layer,
@@ -790,7 +803,7 @@ impl core::fmt::Display for K2Tree {
     if self.leaves.len() == 0 { return write!(f, "[0000]") }
     let mut s = String::new();
     let mut i: usize = 1;
-    for layer_num in 0..self.slayer_starts.len() {
+    for layer_num in 0..self.max_slayers {
       for bit_pos in self.layer_start(layer_num)..self.layer_start(layer_num+1) {
         if self.stems[bit_pos] { s.push('1'); }
         else { s.push('0'); }
@@ -910,7 +923,7 @@ impl K2Tree {
     else {
       let nth_leaf = ones_in_range(
         &self.stems,
-        self.slayer_starts[self.slayer_starts.len()-1],
+        self.slayer_starts[self.max_slayers-1],
         stem_bitpos
       );
       Ok(nth_leaf * self.leaf_len())
