@@ -377,7 +377,7 @@ impl K2Tree {
             /* If no more leaves, then remove all stems immediately
             and don't bother with complex stuff below */
             self.stems = bitvec![0; stem_len];
-            self.slayer_starts = vec![0];
+            self.slayer_starts = vec![0]; //DEAD
             return Ok(())
           }
           self.stems.set(stem_bit_pos, false); //Dead leaf parent bit = 0
@@ -385,7 +385,7 @@ impl K2Tree {
           let mut stem_start = self.stem_start(stem_bit_pos);
           while curr_layer > 0
           && all_zeroes(&self.stems, stem_start, stem_start+stem_len) {
-            for layer_start in &mut self.slayer_starts[curr_layer+1..] {
+            for layer_start in &mut self.slayer_starts[curr_layer+1..] { //DEAD
               // NOTE: this was 1 but it looks like that was an uncaught error, changed to stem_len
               //       if any errors, look here.
               *layer_start -= stem_len; //Adjust lower layer start positions to reflect removal of stem
@@ -416,6 +416,7 @@ impl K2Tree {
           - Construct leaf corresponding to range containing (x, y)
           - Set bit at (x, y) to 1 */
         //Either 0 or == max_slayers?
+        //ALIVE
         let mut layer_starts_len = self.slayer_starts.len(); //cannot replace with max_slayers bc might not be max?
         let mut layer = self.layer_from_range(stem_range);
         let mut subranges: SubRanges;
@@ -452,7 +453,7 @@ impl K2Tree {
           in the child layer. */
           if layer == layer_starts_len-1 {
             stem_start = self.stems.len();
-            self.slayer_starts.push(stem_start);
+            self.slayer_starts.push(stem_start); //ALIVE
             layer_starts_len += 1;
           }
           else {
@@ -481,7 +482,7 @@ impl K2Tree {
           /* If there are layers after the one we just insert a stem
           into: Increase the layer_starts to account for
           the extra stem */
-          for layer_start in &mut self.slayer_starts[layer+1..] {
+          for layer_start in &mut self.slayer_starts[layer+1..] { //DEAD
             *layer_start += stem_len;
           }
         }
@@ -611,10 +612,10 @@ impl K2Tree {
     if self.leaves.len() > 0  {
       /* Only insert the extra layers etc. if the
       tree isn't all 0s */
-      for slayer_start in &mut self.slayer_starts {
+      for slayer_start in &mut self.slayer_starts { //DEAD
         *slayer_start += stem_len;
       }
-      self.slayer_starts.insert(0, 0);
+      self.slayer_starts.insert(0, 0); //DEAD
       /* Insert 10...00 to beginning of stems */
       for _ in 0..stem_len-1 { self.stems.insert(0, false); }
       self.stems.insert(0, true);
@@ -670,8 +671,8 @@ impl K2Tree {
       })
     }
     self.max_slayers -= 1;
-    self.slayer_starts.remove(0);
-    for slayer_start in &mut self.slayer_starts {
+    self.slayer_starts.remove(0); //DEAD
+    for slayer_start in &mut self.slayer_starts { //DEAD
       *slayer_start -= stem_len;
     }
     /* Remove top layer stem */
@@ -698,8 +699,8 @@ impl K2Tree {
   pub unsafe fn shrink_unchecked(&mut self) {
     let stem_len = self.stem_len();
     self.max_slayers -= 1;
-    self.slayer_starts.remove(0);
-    for slayer_start in &mut self.slayer_starts {
+    self.slayer_starts.remove(0); //DEAD
+    for slayer_start in &mut self.slayer_starts { //DEAD
       *slayer_start -= stem_len;
     }
     /* Remove top layer stem */
@@ -924,7 +925,7 @@ impl K2Tree {
     else {
       let nth_leaf = ones_in_range(
         &self.stems,
-        self.slayer_starts[self.max_slayers-1],
+        self.layer_start(self.max_slayers-1),
         stem_bitpos
       );
       Ok(nth_leaf * self.leaf_len())
@@ -1052,7 +1053,7 @@ impl K2Tree {
   #[allow(dead_code)]
   fn footprint(&self) -> usize {
     let mut size: usize = std::mem::size_of_val(self);
-    size += std::mem::size_of::<usize>() * self.slayer_starts.len();
+    size += std::mem::size_of::<usize>() * self.slayer_starts.len(); //DEAD
     size += self.stems.len() / 8;
     size += self.leaves.len() / 8;
     size

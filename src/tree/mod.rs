@@ -25,10 +25,11 @@ use bitvec::vec::BitVec;
 
 impl K2Tree {
   fn layer_len(&self, l: usize) -> usize {
-    if l == self.slayer_starts.len()-1 {
-      return self.stems.len() - self.slayer_starts[l]
+    if l == self.max_slayers-1 {
+      return self.stems.len() - self.layer_start(l)
     }
-    self.slayer_starts[l+1] - self.slayer_starts[l]
+    let layer_starts = self.layer_starts();
+    layer_starts[l+1] - layer_starts[l]
   }
   fn get_coords(&self, leaf_bit_pos: usize) -> [usize; 2] {
     /* Start at the leaf_bit and traverse our way up to the top of the tree,
@@ -69,25 +70,26 @@ impl K2Tree {
   }
   fn parent(&self, stem_start: usize) -> std::result::Result<[usize; 2], ()> {
     /* Returns [stem_start, bit_offset] */
-    if stem_start < self.slayer_starts[1] {
-      return Err(())
-    }
     let stem_len = self.stem_len();
+    if stem_start < stem_len {
+      return Err(()) //First stem cannot have parent
+    }
     /* Find which layer stem_start is in */
+    let layer_starts = self.layer_starts();
     let stem_layer = {
       let mut layer = self.max_slayers-1; //If no match, must be in highest layer
-      for (i, &layer_start) in self.slayer_starts.iter().enumerate() {
+      for (i, &layer_start) in layer_starts.iter().enumerate() {
         if stem_start < layer_start { layer = i-1; break }
       }
       layer
     };
     /* Find the nth stem it is in the layer */
-    let stem_num = (stem_start - self.slayer_starts[stem_layer]) / stem_len;
+    let stem_num = (stem_start - layer_starts[stem_layer]) / stem_len;
     /* Find the nth 1 in the parent layer */
     let parent_bit = one_positions_range(
       &self.stems,
-      self.slayer_starts[stem_layer-1],
-      self.slayer_starts[stem_layer]
+      layer_starts[stem_layer-1],
+      layer_starts[stem_layer]
     )[stem_num];
     Ok([self.stem_start(parent_bit), parent_bit % stem_len])
   }
