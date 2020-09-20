@@ -121,3 +121,6 @@ pub mod error;
 
 /// `BitMatrix` struct.
 pub mod matrix;
+
+#[cfg(test)]
+mod unit_tests;
