@@ -175,6 +175,15 @@ fn one_positions(bits: impl Iterator<Item=bool>) -> Vec<usize> {
     else   { None })
   .collect()
 }
+fn one_positions_bv(bits: &BitVec) -> Vec<usize> {
+  bits.iter()
+  .enumerate()
+  .filter_map(
+    |(pos, &bit)|
+    if bit { Some(pos) }
+    else   { None })
+  .collect()
+}
 fn one_positions_range(bits: &BitVec, begin: usize, end: usize) -> Vec<usize> {
   bits[begin..end].into_iter().enumerate()
   .filter_map(|(pos, bit)|

@@ -15,6 +15,7 @@ categories = ["compression", "data-structures"]
 
 [dependencies]
 bitvec = "0.17.4"
+serde = { version = "1.0.119", features = ["derive"] }
 
 [dev-dependencies]
 rand = "0.7.3"
