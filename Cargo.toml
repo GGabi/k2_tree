@@ -1,6 +1,6 @@
 [package]
 name = "k2_tree"
-version = "0.4.3"
+version = "0.5.0"
 authors = ["GGabi <gabrielroels@googlemail.com>"]
 readme = "README.md"
 edition = "2018"
@@ -15,6 +15,9 @@ categories = ["compression", "data-structures"]
 
 [dependencies]
 bitvec = "0.17.4"
+serde = { version = "1.0.119", features = ["derive"] }
 
 [dev-dependencies]
 rand = "0.7.3"
+serde_json = "1.0"
+serde_yaml = "0.8"

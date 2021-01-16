@@ -1,5 +1,14 @@
 use {
+  std::fmt,
   bitvec::{prelude::{bitvec, bitbox, BitVec}},
+  serde::{
+    Serialize,
+    Deserialize,
+    Serializer,
+    Deserializer,
+    ser::SerializeStruct,
+    de::{self, Visitor, MapAccess}
+  },
   crate::error::K2TreeError as Error,
   crate::tree::*,
   crate::matrix::BitMatrix,
@@ -817,6 +826,141 @@ impl std::hash::Hash for K2Tree {
     self.max_slayers.hash(state);
     self.stems.hash(state);
     self.leaves.hash(state);
+  }
+}
+impl Serialize for K2Tree {
+  fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+    let mut state = serializer.serialize_struct("K2Tree", 5)?;
+    state.serialize_field("stemK", &self.stem_k)?;
+    state.serialize_field("leafK", &self.leaf_k)?;
+    state.serialize_field("maxStemLayers", &self.max_slayers)?;
+    state.serialize_field("stems", &self.stems.clone().into_vec() as &Vec<usize>)?;
+    state.serialize_field("leaves", &self.leaves.clone().into_vec() as &Vec<usize>)?;
+    state.end()
+  }
+}
+impl<'de> Deserialize<'de> for K2Tree {
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+    enum Field {
+      StemK,
+      LeafK,
+      MaxStemLayers,
+      Stems,
+      Leaves
+    }
+    impl<'de> Deserialize<'de> for Field {
+      fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Field, D::Error> {
+          struct FieldVisitor;
+          impl<'de> Visitor<'de> for FieldVisitor {
+            type Value = Field;
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+              formatter.write_str("")
+            }
+            fn visit_str<E: de::Error>(self, value: &str) -> std::result::Result<Field, E> {
+              match value {
+                "stemK" => Ok(Field::StemK),
+                "leafK" => Ok(Field::LeafK),
+                "maxStemLayers" => Ok(Field::MaxStemLayers),
+                "stems" => Ok(Field::Stems),
+                "leaves" => Ok(Field::Leaves),
+                _ => Err(de::Error::unknown_field(value, FIELDS)),
+              }
+            }
+          }
+          deserializer.deserialize_identifier(FieldVisitor)
+      }
+    }
+    struct K2TreeVisitor;
+    impl<'de> Visitor<'de> for K2TreeVisitor {
+      type Value = K2Tree;
+      fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("struct K2Tree")
+      }
+      fn visit_map<V: MapAccess<'de>>(self, mut map: V) -> std::result::Result<K2Tree, V::Error> {
+        let mut stem_k = None;
+        let mut leaf_k = None;
+        let mut max_slayers = None;
+        let mut stems = None;
+        let mut leaves = None;
+        while let Some(key) = map.next_key()? {
+          match key {
+            Field::StemK => {
+              if stem_k.is_some() {
+                  return Err(de::Error::duplicate_field("stem_k"));
+              }
+              stem_k = Some(map.next_value()?);
+            },
+            Field::LeafK => {
+              if leaf_k.is_some() {
+                  return Err(de::Error::duplicate_field("leaf_k"));
+              }
+              leaf_k = Some(map.next_value()?);
+            },
+            Field::MaxStemLayers => {
+              if max_slayers.is_some() {
+                  return Err(de::Error::duplicate_field("max_stem_layer"));
+              }
+              max_slayers = Some(map.next_value()?);
+            },
+            Field::Stems => {
+              if stems.is_some() {
+                return Err(de::Error::duplicate_field("stems"));
+              }
+              stems = Some(BitVec::from(map.next_value::<Vec<usize>>()?));
+            },
+            Field::Leaves => {
+              if leaves.is_some() {
+                return Err(de::Error::duplicate_field("leaves"));
+              }
+              leaves = Some(BitVec::from_vec(map.next_value::<Vec<usize>>()?));
+            }
+          }
+        }
+        let stem_k: usize = stem_k.ok_or_else(|| de::Error::missing_field("stemK"))?;
+        let leaf_k: usize = leaf_k.ok_or_else(|| de::Error::missing_field("leafK"))?;
+        let max_slayers = max_slayers.ok_or_else(|| de::Error::missing_field("maxStemLayers"))?;
+        let mut stems = stems.ok_or_else(|| de::Error::missing_field("stems"))?;
+        let mut leaves = leaves.ok_or_else(|| de::Error::missing_field("leaves"))?;
+
+        // If any values missing, would have thrown by now
+        // Remove any trailing zeroes that comes from converting blindly
+        // from Vec<usize> to list of bits
+        let stem_len: usize = stem_k.pow(2);
+        let leaf_len: usize = leaf_k.pow(2);
+        let last_1_stem = one_positions_bv(&stems).pop().unwrap();
+        let new_stem_len = if last_1_stem+1 % stem_len == 0 {
+            last_1_stem
+          }
+          else {
+            ((last_1_stem / stem_len) + 1) * stem_len
+        };
+        stems.resize(new_stem_len, false);
+        let last_1_leaf = one_positions_bv(&leaves).pop().unwrap();
+        let new_leaf_len = if last_1_leaf+1 % leaf_len == 0 {
+            last_1_leaf
+          }
+          else {
+            ((last_1_leaf / leaf_len) + 1) * leaf_len
+        };
+        leaves.resize(new_leaf_len, false);
+
+        Ok(K2Tree {
+          stem_k,
+          leaf_k,
+          max_slayers,
+          stems,
+          leaves
+        })
+      }
+    }
+    const FIELDS: &[&str] = &[
+      "stem_k",
+      "leaf_k",
+      "max_slayers",
+      "stems",
+      "leaves"
+    ];
+    deserializer.deserialize_struct("K2Tree", FIELDS, K2TreeVisitor)
   }
 }
 
@@ -1775,6 +1919,109 @@ mod many_k {
         }
       }
     }
+    Ok(())
+  }
+}
+
+#[cfg(test)]
+mod ser_de {
+  use super::*;
+  // I reckon formally testing more than one implementation ensures we work pretty generally, assuming serde is consistent
+  #[test]
+  fn serialize_json_0() -> std::result::Result<(), serde_json::Error> {
+    let expected = String::from(r#"{"stemK":2,"leafK":2,"maxStemLayers":2,"stems":[4542],"leaves":[398246]}"#);
+    let actual = serde_json::to_string(&K2Tree::test_tree(2))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn serialize_json_1() -> std::result::Result<(), serde_json::Error> {
+    let expected = String::from(r#"{"stemK":3,"leafK":3,"maxStemLayers":2,"stems":[35253226047194],"leaves":[351913782842122]}"#);
+    let actual = serde_json::to_string(&K2Tree::test_tree(3))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn serialize_json_2() -> std::result::Result<(), serde_json::Error> {
+    let expected = String::from(
+      r#"{"stemK":4,"leafK":4,"maxStemLayers":2,"stems":[13835058330193736073,2251825046626304],"leaves":[2269392002875393,140737488887808]}"#
+    );
+    let actual = serde_json::to_string(&K2Tree::test_tree(4))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_json_0() -> std::result::Result<(), serde_json::Error> {
+    let expected = K2Tree::test_tree(2);
+    let json = r#"{"stemK":2,"leafK":2,"maxStemLayers":2,"stems":[4542],"leaves":[398246]}"#;
+    let actual: K2Tree = serde_json::from_str(json)?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_json_1() -> std::result::Result<(), serde_json::Error> {
+    let expected = K2Tree::test_tree(3);
+    let json = r#"{"stemK":3,"leafK":3,"maxStemLayers":2,"stems":[35253226047194],"leaves":[351913782842122]}"#;
+    let actual: K2Tree = serde_json::from_str(json)?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_json_2() -> std::result::Result<(), serde_json::Error> {
+    let expected = K2Tree::test_tree(4);
+    let json = r#"{"stemK":4,"leafK":4,"maxStemLayers":2,"stems":[13835058330193736073,2251825046626304],"leaves":[2269392002875393,140737488887808]}"#;
+    let actual: K2Tree = serde_json::from_str(json)?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn serialize_yaml_0() -> std::result::Result<(), serde_yaml::Error> {
+    // Grr whitespace matters in yaml!
+    let expected = String::from("---\nstemK: 2\nleafK: 2\nmaxStemLayers: 2\nstems:\n  - 4542\nleaves:\n  - 398246");
+    let actual = serde_yaml::to_string(&K2Tree::test_tree(2))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn serialize_yaml_1() -> std::result::Result<(), serde_yaml::Error> {
+    // Grr whitespace matters in yaml!
+    let expected = String::from("---\nstemK: 3\nleafK: 3\nmaxStemLayers: 2\nstems:\n  - 35253226047194\nleaves:\n  - 351913782842122");
+    let actual = serde_yaml::to_string(&K2Tree::test_tree(3))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn serialize_yaml_2() -> std::result::Result<(), serde_yaml::Error> {
+    // Grr whitespace matters in yaml!
+    let expected = String::from(
+      "---\nstemK: 4\nleafK: 4\nmaxStemLayers: 2\nstems:\n  - 13835058330193736073\n  - 2251825046626304\nleaves:\n  - 2269392002875393\n  - 140737488887808"
+    );
+    let actual = serde_yaml::to_string(&K2Tree::test_tree(4))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_yaml_0() -> std::result::Result<(), serde_yaml::Error> {
+    let expected = K2Tree::test_tree(2);
+    let yaml = "---\nstemK: 2\nleafK: 2\nmaxStemLayers: 2\nstems:\n  - 4542\nleaves:\n  - 398246";
+    let actual: K2Tree = serde_yaml::from_str(yaml)?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_yaml_1() -> std::result::Result<(), serde_yaml::Error> {
+    let expected = K2Tree::test_tree(3);
+    let yaml = "---\nstemK: 3\nleafK: 3\nmaxStemLayers: 2\nstems:\n  - 35253226047194\nleaves:\n  - 351913782842122";
+    let actual: K2Tree = serde_yaml::from_str(yaml)?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_yaml_2() -> std::result::Result<(), serde_yaml::Error> {
+    let expected = K2Tree::test_tree(4);
+    let yaml = "---\nstemK: 4\nleafK: 4\nmaxStemLayers: 2\nstems:\n  - 13835058330193736073\n  - 2251825046626304\nleaves:\n  - 2269392002875393\n  - 140737488887808";
+    let actual: K2Tree = serde_yaml::from_str(yaml)?;
+    assert_eq!(actual, expected);
     Ok(())
   }
 }
