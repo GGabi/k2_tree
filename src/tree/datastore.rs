@@ -1922,3 +1922,106 @@ mod many_k {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod ser_de {
+  use super::*;
+  // I reckon formally testing more than one implementation ensures we work pretty generally, assuming serde is consistent
+  #[test]
+  fn serialize_json_0() -> std::result::Result<(), serde_json::Error> {
+    let expected = String::from(r#"{"stemK":2,"leafK":2,"maxStemLayers":2,"stems":[4542],"leaves":[398246]}"#);
+    let actual = serde_json::to_string(&K2Tree::test_tree(2))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn serialize_json_1() -> std::result::Result<(), serde_json::Error> {
+    let expected = String::from(r#"{"stemK":3,"leafK":3,"maxStemLayers":2,"stems":[35253226047194],"leaves":[351913782842122]}"#);
+    let actual = serde_json::to_string(&K2Tree::test_tree(3))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn serialize_json_2() -> std::result::Result<(), serde_json::Error> {
+    let expected = String::from(
+      r#"{"stemK":4,"leafK":4,"maxStemLayers":2,"stems":[13835058330193736073,2251825046626304],"leaves":[2269392002875393,140737488887808]}"#
+    );
+    let actual = serde_json::to_string(&K2Tree::test_tree(4))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_json_0() -> std::result::Result<(), serde_json::Error> {
+    let expected = K2Tree::test_tree(2);
+    let json = r#"{"stemK":2,"leafK":2,"maxStemLayers":2,"stems":[4542],"leaves":[398246]}"#;
+    let actual: K2Tree = serde_json::from_str(json)?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_json_1() -> std::result::Result<(), serde_json::Error> {
+    let expected = K2Tree::test_tree(3);
+    let json = r#"{"stemK":3,"leafK":3,"maxStemLayers":2,"stems":[35253226047194],"leaves":[351913782842122]}"#;
+    let actual: K2Tree = serde_json::from_str(json)?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_json_2() -> std::result::Result<(), serde_json::Error> {
+    let expected = K2Tree::test_tree(4);
+    let json = r#"{"stemK":4,"leafK":4,"maxStemLayers":2,"stems":[13835058330193736073,2251825046626304],"leaves":[2269392002875393,140737488887808]}"#;
+    let actual: K2Tree = serde_json::from_str(json)?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn serialize_yaml_0() -> std::result::Result<(), serde_yaml::Error> {
+    // Grr whitespace matters in yaml!
+    let expected = String::from("---\nstemK: 2\nleafK: 2\nmaxStemLayers: 2\nstems:\n  - 4542\nleaves:\n  - 398246");
+    let actual = serde_yaml::to_string(&K2Tree::test_tree(2))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn serialize_yaml_1() -> std::result::Result<(), serde_yaml::Error> {
+    // Grr whitespace matters in yaml!
+    let expected = String::from("---\nstemK: 3\nleafK: 3\nmaxStemLayers: 2\nstems:\n  - 35253226047194\nleaves:\n  - 351913782842122");
+    let actual = serde_yaml::to_string(&K2Tree::test_tree(3))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn serialize_yaml_2() -> std::result::Result<(), serde_yaml::Error> {
+    // Grr whitespace matters in yaml!
+    let expected = String::from(
+      "---\nstemK: 4\nleafK: 4\nmaxStemLayers: 2\nstems:\n  - 13835058330193736073\n  - 2251825046626304\nleaves:\n  - 2269392002875393\n  - 140737488887808"
+    );
+    let actual = serde_yaml::to_string(&K2Tree::test_tree(4))?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_yaml_0() -> std::result::Result<(), serde_yaml::Error> {
+    let expected = K2Tree::test_tree(2);
+    let yaml = "---\nstemK: 2\nleafK: 2\nmaxStemLayers: 2\nstems:\n  - 4542\nleaves:\n  - 398246";
+    let actual: K2Tree = serde_yaml::from_str(yaml)?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_yaml_1() -> std::result::Result<(), serde_yaml::Error> {
+    let expected = K2Tree::test_tree(3);
+    let yaml = "---\nstemK: 3\nleafK: 3\nmaxStemLayers: 2\nstems:\n  - 35253226047194\nleaves:\n  - 351913782842122";
+    let actual: K2Tree = serde_yaml::from_str(yaml)?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+  #[test]
+  fn deserialize_yaml_2() -> std::result::Result<(), serde_yaml::Error> {
+    let expected = K2Tree::test_tree(4);
+    let yaml = "---\nstemK: 4\nleafK: 4\nmaxStemLayers: 2\nstems:\n  - 13835058330193736073\n  - 2251825046626304\nleaves:\n  - 2269392002875393\n  - 140737488887808";
+    let actual: K2Tree = serde_yaml::from_str(yaml)?;
+    assert_eq!(actual, expected);
+    Ok(())
+  }
+}
