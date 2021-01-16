@@ -1,6 +1,6 @@
 [package]
 name = "k2_tree"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["GGabi <gabrielroels@googlemail.com>"]
 readme = "README.md"
 edition = "2018"
