@@ -13,6 +13,11 @@ very slow without them!
 */
 
 /*!
+# What's new in version 0.5:
+- `K2Tree` now implements serde's Serialize and Deserialize traits.
+*/
+
+/*!
 # When `K2Tree`s are Useful:
 
 `K2Tree`s are useful when you need to store two-dimensional data efficiently, especially when 
@@ -81,24 +86,17 @@ And then the `K2Tree` is built from this modified matrix:
 1000 1011 0010  1010 1000 1100
 ```
 
-In the first layer of the tree, each bit refers to one of the 4 largest quadrants in the modified matrix in the order:
-* The top-left contains nothing
-* The top-right contains something
-* The bottom-left contains something
-* The bottom-right contains something
+From left-to-right in the first layer of the tree, each bit refers to one of the 4 largest quadrants in the modified matrix: 
+* `0111` => Upper-left empty, upper-right not empty, lower-left not empty, lower-right not empty.
 
-Then, for the second layer each block refers to the sub-matrices of each quadrant:
-* The top-right quadrant contains the following sub-quadrants:
-  * The top-left, top-right and bottom-right contain something
-  * The bottom-left contains nothing
-* The bottom-left qudrant contains the following:
-  * Top-left and top-right contains something
-  * Bottom-left and bottom-right contains nothing
-* And so on for the final quadrant
+Each block in the second layer refers to the sub-matrices of each parent:
+* The upper-right quadrant (`1101`) contains the following sub-quadrants:
+  * Lower-left is empty.
+  * Upper-left, upper-right and lower-right are not empty.
+* And so on.
 
-The final layer is referred to as the leaf-layer and contains the actual data in the matrix:
-- The top-left sub-quadrant of the top-right quadrant contains the bits: 1000
-- Etc.
+The final, or leaf, layer of the tree contains the actual data in the matrix. 
+For example, the upper-left sub-quadrant of the upper-right quadrant contains the bits: `1000`.
 
 ## Bit Representation of K2Tree
 
@@ -107,6 +105,18 @@ Finally, the above `K2Tree` is stored as a series of bits:
 `[0111; 1101, 1100, 0100; 1000, 1011, 0010, 1010, 1000, 1100]`
 
 (Where `;` separates layers and `,` separates blocks)
+
+## Final `K2Tree`:
+
+```ignore
+K2Tree {
+  stem_k: 2, // usize
+  leaf_k: 2, // usize
+  max_slayers: 2, // usize
+  stems: [0111110111000100], // BitVec
+  leaves: [100010110010101010001100], // BitVec
+}
+```
 
 -- groels
 */
