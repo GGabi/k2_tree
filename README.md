@@ -1,6 +1,7 @@
 
-[![Build Status](https://github.com/GGabi/k2_tree/workflows/Build%20and%20Test/badge.svg)](https://github.com/GGabi/k2_tree/actions)
+[![Build Status](https://github.com/GGabi/k2_tree/workflows/build%20&%20tests/badge.svg)](https://github.com/GGabi/k2_tree/actions)
 [![](http://meritbadge.herokuapp.com/k2_tree)](https://crates.io/crates/k2_tree)
+[![API](https://docs.rs/k2_tree/badge.svg)](https://docs.rs/k2_tree)
 
 # k2_tree
 A collection designed to efficiently compress sparsely-populated bit-matrices.
