@@ -14,7 +14,7 @@ See the original proposal [here](https://users.dcc.uchile.cl/~gnavarro/ps/spire0
 Add  `k2_tree`  into your project dependencies:
 ```toml
 [dependencies]
-k2_tree = "0.5.1"
+k2_tree = "0.5.2"
 ```
 
 # When `K2Tree`s are Useful:
