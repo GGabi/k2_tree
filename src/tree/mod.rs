@@ -80,12 +80,13 @@ impl K2Tree {
     /* Find the nth stem it is in the layer */
     let stem_num = (stem_start - layer_starts[stem_layer]) / stem_len;
     /* Find the nth 1 in the parent layer */
-    let parent_bit = one_positions_range(
+    let parent_bit_relative_pos = one_positions_range(
       &self.stems,
       layer_starts[stem_layer-1],
       layer_starts[stem_layer]
     )[stem_num];
-    Ok([self.stem_start(parent_bit), parent_bit % stem_len])
+    let parent_bit_absolute_pos = parent_bit_relative_pos + layer_starts[stem_layer-1];
+    Ok([self.stem_start(parent_bit_absolute_pos), parent_bit_absolute_pos % stem_len])
   }
   fn layer_start(&self, l: usize) -> usize {
     //Private method, let it crash seeing as is just unwrapped otherwise
@@ -107,7 +108,7 @@ impl K2Tree {
     //Private method, let it crash seeing as is just unwrapped otherwise
     let mut curr_layer = 1;
     let mut layer_starts = vec![0, self.stem_len()];
-    while curr_layer < self.max_slayers {
+    while curr_layer < self.max_slayers-1 {
       let stems_in_curr_layer = ones_in_range(
         &self.stems,
         layer_starts[curr_layer-1],
