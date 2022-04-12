@@ -15,8 +15,7 @@ pub use iterators::{
 };
 
 /* Private Yet Common to Everything Module */
-use bitvec::{prelude::{bitvec, bitbox, BitVec}};
-use crate::matrix::BitMatrix;
+use bitvec::prelude::BitVec;
 
 impl K2Tree {
   // Internal: Never call with layer >= self.max_slayers
@@ -199,9 +198,11 @@ fn one_positions_range(bits: &BitVec, begin: usize, end: usize) -> Vec<usize> {
 #[derive(Debug, Clone)]
 struct SubRanges {
   /// Number of horizontal subranges.
-  width: usize,
+  #[allow(dead_code)]
+  pub width: usize,
   /// Number of vertical subranges.
-  height: usize,
+  #[allow(dead_code)]
+  pub height: usize,
   /// Subranges
   subranges: Vec<Range2D>,
 }

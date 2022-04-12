@@ -38,6 +38,7 @@ pub struct LeafBit {
 }
 
 /// An iterator over a K2Tree's stems which produces instances of StemBit.
+#[derive(Debug)]
 pub struct Stems<'a> {
   tree: &'a K2Tree,
   pos: usize,
@@ -91,6 +92,7 @@ impl<'a> Stems<'a> {
 }
 
 /// A consuming iterator over a K2Tree's stems which produces instances of StemBit.
+#[derive(Debug)]
 pub struct IntoStems {
   tree: K2Tree,
   pos: usize,
@@ -144,6 +146,7 @@ impl IntoStems {
 }
 
 /// An iterator over a K2Tree's leaves which produces instances of LeafBit.
+#[derive(Debug)]
 pub struct Leaves<'a> {
   tree: &'a K2Tree,
   pos: usize,
@@ -177,6 +180,7 @@ impl<'a> Leaves<'a> {
 }
 
 /// A consuming iterator over a K2Tree's leaves which produces instances of LeafBit.
+#[derive(Debug)]
 pub struct IntoLeaves {
   tree: K2Tree,
   pos: usize,
@@ -211,6 +215,7 @@ impl IntoLeaves {
 }
 
 /// An iterator over a K2Tree's stems which produces the raw boolean-values of each bit.
+#[derive(Debug)]
 pub struct StemsRaw<'a> {
   stems: &'a BitVec,
   pos: usize,
@@ -237,6 +242,7 @@ impl<'a> StemsRaw<'a> {
 }
 
 /// An iterator over a K2Tree's leaves which prduces the raw boolean-values of each bit.
+#[derive(Debug)]
 pub struct LeavesRaw<'a> {
   leaves: &'a BitVec,
   pos: usize,
@@ -261,12 +267,3 @@ impl<'a> LeavesRaw<'a> {
     }
   }
 }
-
-// #[cfg(test)]
-// mod tests {
-//   use super::*;
-//   #[test]
-//   fn IntoStems() {
-//     let tree = K2Tree::
-//   }
-// }
