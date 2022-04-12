@@ -14,7 +14,7 @@ while minimising the number of unique enumerations required:
 */
 
 /// Errors produced as a result of interactions with the K2Tree object.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum K2TreeError {
   /// Produced when a user attempts to create a K2Tree with a k values below 2.
   SmallStemKValue {
@@ -162,7 +162,7 @@ impl From<SubRangesError> for K2TreeError {
 }
 
 /// Errors produced as a result of interactions with the BitMatrix object.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum BitMatrixError {
   /// Produced when a user attempts to read or write to a bit outside of the
   /// valid range.
@@ -191,7 +191,7 @@ impl std::fmt::Display for BitMatrixError {
 }
 
 /// Errors produced as a result of interactions with the SubRanges object.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SubRangesError {
   /// Produced when a user attempts a Range2D cannot be evenly subdivided
   /// by the requested number of subranges.

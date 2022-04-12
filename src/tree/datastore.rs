@@ -1051,101 +1051,6 @@ impl K2Tree {
 /* Private funcs used in testing */
 #[cfg(test)]
 impl K2Tree {
-  fn test_tree(k: usize) -> Self {
-    match k {
-      2 => K2Tree {
-        stem_k: 2,
-        leaf_k: 2,
-        max_slayers: 2,
-        stems:  bitvec![0,1,1,1, 1,1,0,1, 1,0,0,0, 1,0,0,0],
-        leaves: bitvec![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0],
-      },
-      3 => K2Tree {
-        stem_k: 3,
-        leaf_k: 3,
-        max_slayers: 2,
-        stems:  bitvec![
-          0,1,0,1,1,0,1,1,0, 1,1,0,0,0,0,0,0,0, 1,0,0,0,0,0,0,0,0,
-          1,0,0,0,0,0,0,0,0, 1,0,0,0,0,0,0,0,0, 1,0,0,0,0,0,0,0,0
-        ],
-        leaves: bitvec![
-          0,1,0,1,0,0,0,0,1, 1,0,0,1,0,0,1,0,0, 1,0,0,0,0,0,0,0,0,
-          0,1,0,1,0,0,0,0,0, 1,0,0,0,0,0,0,0,0, 0,1,0,1,0,0,0,0,0,
-        ]
-      },
-      4 => K2Tree {
-        stem_k: 4,
-        leaf_k: 4,
-        max_slayers: 2,
-        stems: bitvec![
-          1,0,0,1,0,0,0,1,1,0,0,0,1,1,0,1, 1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
-          0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,
-          0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,
-          1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
-        ],
-        leaves: bitvec![
-          1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,
-          0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0, 0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
-          0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0, 0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
-          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-        ],
-      },
-      _ => K2Tree::with_k(2, 2).unwrap(),
-    }
-  }
-  fn test_matrix(k: usize) -> BitMatrix {
-    match k {
-      2 => {
-        let bits = bitvec![
-          0,0,0,0, 0,1,0,1,
-          0,0,0,0, 1,0,0,1,
-          0,0,0,0, 0,0,1,1,
-          0,0,0,0, 0,0,0,0,
-
-          1,0,0,0, 0,1,0,0,
-          0,0,0,0, 1,0,0,0,
-          0,0,0,0, 0,0,0,0,
-          0,0,0,0, 0,0,0,0
-        ];
-        BitMatrix::from_bits(8, 8, bits)
-      },
-      3 => {
-        let bits = bitvec![
-          0,0,0, 0,0,0, 0,0,0,  0,1,0, 1,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  1,0,0, 1,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,1, 1,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-
-          1,0,0, 0,0,0, 0,0,0,  0,1,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  1,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          
-          1,0,0, 0,0,0, 0,0,0,  0,1,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  1,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-          0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,  0,0,0, 0,0,0, 0,0,0,
-        ];
-        BitMatrix::from_bits(27, 27, bits)
-      },
-      _ => BitMatrix::new(),
-    }
-  }
   fn parent_stem(&self, stem_start: usize) -> usize {
     self.parent(stem_start).unwrap()[0]
   }
@@ -1201,6 +1106,18 @@ mod api {
         assert_eq!(K2Tree::with_k(stem_k, leaf_k)?, expected);
       }
     }
+    Ok(())
+  }
+  #[test]
+  fn with_k_small_stem() -> Result<()> {
+    let err = Err(Error::SmallStemKValue { stem_k: 1 });
+    assert_eq!(K2Tree::with_k(1, 2), err);
+    Ok(())
+  }
+  #[test]
+  fn with_k_small_leaf() -> Result<()> {
+    let err = Err(Error::SmallLeafKValue { leaf_k: 1 });
+    assert_eq!(K2Tree::with_k(2, 1), err);
     Ok(())
   }
   #[test]
@@ -1436,6 +1353,15 @@ mod api {
     Ok(())
   }
   #[test]
+  fn set_unset_many_stem_layers() -> Result<()> {
+    let mut tree = K2Tree::with_k(2, 2)?;
+    for _ in 0..9 { tree.grow(); }
+    tree.set(256, 256, true)?;
+    tree.set(0, 0, true)?;
+    tree.set(0, 0, false)?;
+    Ok(())
+  }
+  #[test]
   fn matrix_width_and_grow_0() -> Result<()> {
     for k in 2..9usize {
       let k_cubed = k.pow(3);
@@ -1469,6 +1395,24 @@ mod api {
       assert_eq!(k, K2Tree::with_k(k, k)?.stem_k);
     }
     Ok(())
+  }
+  #[test]
+  fn into_stems_0() {
+    let tree = K2Tree::test_tree(2);
+    let values = bitvec![0,1,1,1, 1,1,0,1, 1,0,0,0, 1,0,0,0];
+    let stems  = [0, 0, 1, 2];
+    let bits   = [0, 1, 2, 3];
+    for (i, stem) in tree.into_stems().enumerate() {
+      assert_eq!(
+        iterators::StemBit {
+          value: values[i],
+          layer: if i < 4 { 0 } else { 1 },
+          stem: stems[i/4],
+          bit: bits[i%4],
+        },
+        stem
+      );
+    }
   }
   #[test]
   fn stems_0() {
@@ -2088,7 +2032,6 @@ mod many_k {
 #[cfg(test)]
 mod ser_de {
   use super::*;
-  // I reckon formally testing more than one implementation ensures we work pretty generally, assuming serde is consistent
   #[test]
   fn serialize_json_0() -> std::result::Result<(), serde_json::Error> {
     let expected = String::from(r#"{"stemK":2,"leafK":2,"maxStemLayers":2,"stems":[4542],"leaves":[398246]}"#);
@@ -2133,56 +2076,6 @@ mod ser_de {
     let expected = K2Tree::test_tree(4);
     let json = r#"{"stemK":4,"leafK":4,"maxStemLayers":2,"stems":[13835058330193736073,2251825046626304],"leaves":[2269392002875393,140737488887808]}"#;
     let actual: K2Tree = serde_json::from_str(json)?;
-    assert_eq!(actual, expected);
-    Ok(())
-  }
-  #[test]
-  fn serialize_yaml_0() -> std::result::Result<(), serde_yaml::Error> {
-    // Grr whitespace matters in yaml!
-    let expected = String::from("---\nstemK: 2\nleafK: 2\nmaxStemLayers: 2\nstems:\n  - 4542\nleaves:\n  - 398246");
-    let actual = serde_yaml::to_string(&K2Tree::test_tree(2))?;
-    assert_eq!(actual, expected);
-    Ok(())
-  }
-  #[test]
-  fn serialize_yaml_1() -> std::result::Result<(), serde_yaml::Error> {
-    // Grr whitespace matters in yaml!
-    let expected = String::from("---\nstemK: 3\nleafK: 3\nmaxStemLayers: 2\nstems:\n  - 35253226047194\nleaves:\n  - 351913782842122");
-    let actual = serde_yaml::to_string(&K2Tree::test_tree(3))?;
-    assert_eq!(actual, expected);
-    Ok(())
-  }
-  #[test]
-  fn serialize_yaml_2() -> std::result::Result<(), serde_yaml::Error> {
-    // Grr whitespace matters in yaml!
-    let expected = String::from(
-      "---\nstemK: 4\nleafK: 4\nmaxStemLayers: 2\nstems:\n  - 13835058330193736073\n  - 2251825046626304\nleaves:\n  - 2269392002875393\n  - 140737488887808"
-    );
-    let actual = serde_yaml::to_string(&K2Tree::test_tree(4))?;
-    assert_eq!(actual, expected);
-    Ok(())
-  }
-  #[test]
-  fn deserialize_yaml_0() -> std::result::Result<(), serde_yaml::Error> {
-    let expected = K2Tree::test_tree(2);
-    let yaml = "---\nstemK: 2\nleafK: 2\nmaxStemLayers: 2\nstems:\n  - 4542\nleaves:\n  - 398246";
-    let actual: K2Tree = serde_yaml::from_str(yaml)?;
-    assert_eq!(actual, expected);
-    Ok(())
-  }
-  #[test]
-  fn deserialize_yaml_1() -> std::result::Result<(), serde_yaml::Error> {
-    let expected = K2Tree::test_tree(3);
-    let yaml = "---\nstemK: 3\nleafK: 3\nmaxStemLayers: 2\nstems:\n  - 35253226047194\nleaves:\n  - 351913782842122";
-    let actual: K2Tree = serde_yaml::from_str(yaml)?;
-    assert_eq!(actual, expected);
-    Ok(())
-  }
-  #[test]
-  fn deserialize_yaml_2() -> std::result::Result<(), serde_yaml::Error> {
-    let expected = K2Tree::test_tree(4);
-    let yaml = "---\nstemK: 4\nleafK: 4\nmaxStemLayers: 2\nstems:\n  - 13835058330193736073\n  - 2251825046626304\nleaves:\n  - 2269392002875393\n  - 140737488887808";
-    let actual: K2Tree = serde_yaml::from_str(yaml)?;
     assert_eq!(actual, expected);
     Ok(())
   }

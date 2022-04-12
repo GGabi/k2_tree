@@ -54,8 +54,14 @@ impl BitMatrix {
         max_x_y: [self.width-1, self.height-1],
       })
     }
-    let index: usize = y*self.width + x;
-    Ok(*self.bits.get(index).unwrap())
+    let index = y*self.width + x;
+    return match self.bits.get(index) {
+      Some(&bit) => Ok(bit),
+      None => Err(BitMatrixError::OutOfBounds {
+        x_y: [x, y],
+        max_x_y: [self.width-1, self.height-1],
+      }),
+    };
   }
   /// Returns the state of all the bits at a specific x-coordinate.
   /// 
@@ -106,11 +112,11 @@ impl BitMatrix {
   /// If len is greater than matrix's width, each row is extended with 0s.
   /// Otherwise, each row is concatenated.
   pub fn resize_width(&mut self, len: usize) {
-    //Add or remove values at the correct spaces from the end backwards,
+    // Add or remove values at the correct spaces from the end backwards,
     //  as to not change the index of insertion sites on other rows.
-    //Work out whether we're growing or shrinking
+    // Work out whether we're growing or shrinking
     if len > self.width {
-      //Growing
+      // Growing
       let diff = len - self.width;
       for row in (1..=self.height).rev() {
         let row_end = self.width * row;
@@ -118,7 +124,7 @@ impl BitMatrix {
       }
     }
     else if len < self.width {
-      //Shrinking
+      // Shrinking
       let diff = self.width - len;
       for row in (1..=self.height).rev() {
         let row_end = self.width * row;
@@ -242,7 +248,7 @@ fn all_zeroes(bits: &BitVec, begin: usize, end: usize) -> bool {
 
 #[cfg(test)]
 mod api {
-  use super::*;
+use super::*;
   #[test]
   fn new() {
     let m = BitMatrix::new();
@@ -251,14 +257,22 @@ mod api {
     assert_eq!(Vec::<bool>::new(), m.into_bits());
   }
   #[test]
-  fn with_dimensions() {
+  fn with_dimensions_0() {
     let m = BitMatrix::with_dimensions(8, 8);
     assert_eq!(8, m.width);
     assert_eq!(8, m.height);
     assert_eq!(vec![false; 64], m.into_bits());
   }
   #[test]
-  fn from_bits() {
+  fn with_dimensions_1() {
+    let m = BitMatrix::with_dimensions(0, 0);
+    assert_eq!(0, m.width);
+    assert_eq!(0, m.height);
+    assert_eq!(vec![false; 0], m.to_bits());
+    assert_eq!(BitMatrix::new(), m);
+  }
+  #[test]
+  fn from_bit_0() {
     let bits = vec![
       false,false,false,true,
       false,false,true,false,
@@ -269,6 +283,44 @@ mod api {
     assert_eq!(4, m.width);
     assert_eq!(4, m.height);
     assert_eq!(bits, m.into_bits());
+  }
+  #[test]
+  fn from_bits_1() {
+    let input_bits = vec![
+      false,false,false,true,
+      false,false,true,false,
+      false,true,false,false,
+      true,
+    ];
+    let expected_bits = vec![
+      false,false,false,true,
+      false,false,true,false,
+      false,true,false,false,
+      true,false,false,false,
+    ];
+    let m = BitMatrix::from_bits(4, 4, input_bits.clone());
+    assert_eq!(4, m.width);
+    assert_eq!(4, m.height);
+    assert_eq!(expected_bits, m.into_bits());
+  }
+  #[test]
+  fn from_bits_2() {
+    let input_bits = vec![
+      false,false,false,true,
+      false,false,true,false,
+      false,true,false,false,
+      true,false,false,false,true,true,false,false,true // excess bits to be discarded
+    ];
+    let expected_bits = vec![
+      false,false,false,true,
+      false,false,true,false,
+      false,true,false,false,
+      true,false,false,false,
+    ];
+    let m = BitMatrix::from_bits(4, 4, input_bits.clone());
+    assert_eq!(4, m.width);
+    assert_eq!(4, m.height);
+    assert_eq!(expected_bits, m.into_bits());
   }
   #[test]
   fn get() -> Result<()> {
@@ -286,6 +338,12 @@ mod api {
     assert_eq!(true, m.get(1, 2)?);
     assert_eq!(true, m.get(0, 3)?);
     assert_eq!(false, m.get(3, 3)?);
+    assert_eq!(BitMatrixError::OutOfBounds {
+      x_y: [4, 4],
+      max_x_y: [3, 3]
+    },
+      m.get(4, 4).unwrap_err()
+    );
     Ok(())
   }
   #[test]
@@ -300,6 +358,12 @@ mod api {
     assert_eq!(true, m.get(3, 3)?);
     assert_eq!(false, m.get(2, 3)?);
     assert_eq!(false, m.get(3, 2)?);
+    assert_eq!(BitMatrixError::OutOfBounds {
+      x_y: [8, 8],
+      max_x_y: [7, 7]
+    },
+      m.set(8, 8, true).unwrap_err()
+    );
     Ok(())
   }
   #[test]
@@ -325,7 +389,7 @@ mod api {
   fn resize_width_shrink() -> Result<()> {
     let bits = vec![
       false,false,false,true,
-      false,false,true,false,
+      false,true,true,false,
       false,true,false,false,
       true,false,false,false,
     ];
@@ -337,7 +401,13 @@ mod api {
     assert_eq!(2, m.width);
     assert!(m.get(3, 0).is_err());
     assert_eq!(false, m.get(1, 0)?);
-    assert_eq!(true, m.get(1, 2)?);
+    assert_eq!(true, m.get(1, 1)?);
+    assert_eq!(BitMatrixError::OutOfBounds {
+      x_y: [2, 3],
+      max_x_y: [1, 3]
+    },
+      m.get(2, 3).unwrap_err()
+    );
     Ok(())
   }
   #[test]
@@ -362,7 +432,7 @@ mod api {
   fn resize_height_shrink() -> Result<()> {
     let bits = vec![
       false,false,false,true,
-      false,false,true,false,
+      false,true,true,false,
       false,true,false,false,
       true,false,false,false,
     ];
@@ -374,6 +444,13 @@ mod api {
     assert_eq!(2, m.height);
     assert!(m.get(0, 3).is_err());
     assert_eq!(false, m.get(0, 1)?);
+    assert_eq!(true, m.get(1, 1)?);
+    assert_eq!(BitMatrixError::OutOfBounds {
+      x_y: [3, 2],
+      max_x_y: [3, 1]
+    },
+      m.get(3, 2).unwrap_err()
+    );
     Ok(())
   }
   #[test]
