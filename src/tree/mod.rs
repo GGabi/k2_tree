@@ -289,6 +289,13 @@ impl PartialEq for Range2D {
 }
 impl Eq for Range2D {}
 
+/* Only used in tests */
+#[cfg(test)]
+use {
+  bitvec::prelude::bitvec,
+  crate::matrix::BitMatrix
+};
+
 /* Tests */
 #[cfg(test)]
 mod range_tests {
